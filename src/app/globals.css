@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --color-app-bg-start: #232324;
+  --color-app-bg-end: #000000;
+  --color-surface: #ffffff;
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+  --color-muted: #a5a6ae;
+  --color-muted-2: #82838b;
+  --color-hairline: rgba(255, 255, 255, 0.1);
+  --color-chip: rgba(255, 255, 255, 0.05);
+  --color-rank: #1c1c1c;
+  --color-tag: rgba(0, 0, 0, 0.5);
+  --color-accent: #5a70ff;
+  --color-accent-bg: rgba(90, 112, 255, 0.25);
+  --color-accent-border: rgba(90, 112, 255, 0.5);
+  --color-danger: #ff5a5a;
+}
+
+@theme inline {
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-marker: var(--font-marker), cursive;
+
+  --color-surface: var(--color-surface);
+  --color-ink: var(--color-ink);
+  --color-paper: var(--color-paper);
+  --color-muted: var(--color-muted);
+  --color-muted-2: var(--color-muted-2);
+  --color-hairline: var(--color-hairline);
+  --color-chip: var(--color-chip);
+  --color-rank: var(--color-rank);
+  --color-tag: var(--color-tag);
+  --color-accent: var(--color-accent);
+  --color-accent-bg: var(--color-accent-bg);
+  --color-accent-border: var(--color-accent-border);
+  --color-danger: var(--color-danger);
+}
+
+body {
+  color: #ffffff;
+}
+
+.bg-app {
+  background: linear-gradient(
+    to bottom,
+    var(--color-app-bg-start),
+    var(--color-app-bg-end)
+  );
+}
+
+.text-app {
+  color: #ffffff;
+}
