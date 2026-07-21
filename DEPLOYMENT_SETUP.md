@@ -152,20 +152,21 @@ Supabase's default email sender will rate-limit you once real people sign up.
 
 ## Stage 7 — Clear the demo data
 
-Your database currently holds fake photos (Alex, Sam, Jordan, Casey, Riley).
-Wipe them before real users arrive:
+Removes the fake photos (Alex, Sam, Jordan, Casey, Riley), their captions and
+votes, the fake archived week, and the `*@seed.picoftheweek.test` accounts:
 
 ```
 cd ~/POW
-node -e 'import("./scripts/mgmt.mjs").then(async ({runSql}) => {
-  await runSql("truncate reports, view_sessions, caption_votes, captions, photos, contest_weeks restart identity cascade");
-  await runSql("select * from rollover_contest_week()");
-  console.log("cleared demo data and started a fresh contest week");
-})'
+node scripts/clear-demo-data.mjs
 ```
 
-The seed accounts (`*@seed.picoftheweek.test`) can be deleted in Supabase under
-**Authentication → Users** if you want them gone too.
+**This deliberately does NOT touch real submissions or real accounts.** It only
+deletes photos whose image points at `/seed/...` — anything captured through the
+app is stored in Supabase and is left alone. The script prints what survived so
+you can confirm.
+
+> Do not `truncate` these tables once anyone has used the site — that deletes
+> real people's photos along with the demo ones. Use this script instead.
 
 ---
 
