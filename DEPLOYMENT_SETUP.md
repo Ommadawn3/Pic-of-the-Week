@@ -1,145 +1,213 @@
-# Deployment Setup — Pic of the Week
+# Deploying Pic of the Week — step by step
 
-Step-by-step instructions to get from code to a live domain. Follow in order — later steps assume earlier ones are done. Run terminal commands from the project root unless noted.
+Written for someone who hasn't deployed a site before. Do these in order.
+Every command goes in **Terminal** (press `Cmd+Space`, type "Terminal", hit Enter).
 
-## 0. Prerequisites
-
-You already have Node.js and npm installed (via Homebrew) and the Claude Code CLI installed. Confirm both still work:
+**Before you start:** open a **brand-new Terminal window**. Your Node install
+lives in a folder that only new windows pick up. Check it works:
 
 ```
+cd ~/POW
 node -v
-npm -v
-claude --version
 ```
 
-## 1. Create the Supabase project
+You should see something like `v26.5.0`. If you get "command not found", close
+Terminal completely and open a fresh window.
 
-1. Go to `https://supabase.com`, sign in (or create an account), click **New project**.
-2. Choose an organization, name the project `pic-of-the-week` (or similar), set a strong database password (save it — you won't see it again), pick a region close to your users, click **Create new project**. Wait a minute or two for provisioning.
-3. In the project dashboard, go to **Project Settings → API**. Copy:
-   - **Project URL** → this is `NEXT_PUBLIC_SUPABASE_URL`
-   - **anon public key** → this is `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - **service_role key** (under the same page, keep this secret) → this is `SUPABASE_SERVICE_ROLE_KEY`, used only in server-side code (admin actions, cron rollover), never sent to the browser.
-4. Go to **SQL Editor**, paste in the schema from the `CLAUDE_CODE_PROMPT.md` "Data model" section (Claude Code will likely have already applied this as a migration file in the repo — if so, run `supabase db push` instead, see step 1a).
+**What this costs:** everything here is free except the domain (~$12–20/year).
 
-### 1a. (If Claude Code created a `supabase/migrations` folder)
-Install the Supabase CLI and link it to your project instead of pasting SQL manually:
+---
 
-```
-npm install -g supabase
-supabase login
-supabase link --project-ref <your-project-ref>   # ref is in the Supabase project URL
-supabase db push
-```
+## Stage 1 — Put the code on GitHub
 
-## 2. Configure Supabase Auth (magic link)
+GitHub stores your code. Vercel reads from it to deploy.
 
-1. In the Supabase dashboard, go to **Authentication → Providers**, confirm **Email** is enabled and **Confirm email** / passwordless "Magic Link" is on (password sign-up can stay disabled since this app is magic-link-only).
-2. Go to **Authentication → URL Configuration**, set:
-   - **Site URL**: your production domain once you have it (step 6) — use `http://localhost:3000` for now, you'll update this after the domain is live.
-   - **Redirect URLs**: add both `http://localhost:3000/**` (local dev) and your future production domain `https://yourdomain.com/**`.
-3. Go to **Authentication → Email Templates → Magic Link**, review the default template. Supabase's built-in email sending has strict rate limits meant for development only — **before real users sign up**, connect a real SMTP provider:
-   - Go to **Project Settings → Auth → SMTP Settings**, enable **Custom SMTP**, and fill in credentials from a provider like Resend, Postmark, or SendGrid (all have free tiers sufficient for launch volume). This step can be deferred until just before go-live, but don't skip it — the default sender will silently fail or get rate-limited under real usage.
-
-## 3. Local environment setup
-
-In the project root, create `.env.local` (never commit this file):
+1. Go to https://github.com and make an account (skip if you have one).
+2. Click the **+** in the top-right → **New repository**.
+3. Fill in:
+   - **Repository name**: `pic-of-the-week`
+   - **Private** (recommended)
+   - **Do NOT** check "Add a README" or any other file — the repo must start empty.
+4. Click **Create repository**.
+5. GitHub shows a page with commands. Ignore it and run these instead, replacing
+   `YOUR-USERNAME` with your GitHub username:
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=<from step 1>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<from step 1>
-SUPABASE_SERVICE_ROLE_KEY=<from step 1>
-ADMIN_DASHBOARD_PASSWORD=<pick a strong password for the /admin route>
-```
-
-Confirm `.env.local` is listed in `.gitignore` (Next.js's default `.gitignore` already includes it — double check before your first commit).
-
-Run locally:
-
-```
-npm install
-npm run dev
-```
-
-Visit `http://localhost:3000`, confirm the app loads and Supabase connectivity works (whatever the Phase 1 acceptance check in `CLAUDE_CODE_PROMPT.md` specifies).
-
-## 4. Push the code to GitHub
-
-If Claude Code didn't already initialize git:
-
-```
-git init
-git add .
-git commit -m "Initial commit"
-```
-
-Create a new repo on GitHub (via `gh repo create` if you have the GitHub CLI, or through github.com), then:
-
-```
-git remote add origin <your-repo-url>
-git branch -M main
+cd ~/POW
+git remote add origin https://github.com/YOUR-USERNAME/pic-of-the-week.git
 git push -u origin main
 ```
 
-## 5. Create the Vercel project
+6. It will ask you to sign in. A browser window opens — approve it.
+7. Refresh the GitHub page. You should see your files.
 
-1. Go to `https://vercel.com`, sign in with GitHub, click **Add New → Project**, select your repo.
-2. Vercel auto-detects Next.js — leave build settings as default.
-3. Before deploying, click **Environment Variables** and add the same four variables from your `.env.local` (step 3). Set them for **Production**, **Preview**, and **Development** environments.
-4. Click **Deploy**. Wait for the build to finish — you'll get a `*.vercel.app` URL.
-5. Visit the `.vercel.app` URL and confirm the app works the same as local.
+> If it says `remote origin already exists`, run
+> `git remote set-url origin https://github.com/YOUR-USERNAME/pic-of-the-week.git`
+> and push again.
 
-## 6. Buy and connect a domain
+---
 
-You don't own a domain yet. Two easy options:
+## Stage 2 — Deploy to Vercel
 
-**Option A — buy through Vercel (simplest, one less account to manage)**
-1. In your Vercel project, go to **Settings → Domains**, type the domain you want, and if it's available Vercel will offer to sell/register it directly, walking you through payment. DNS is automatically configured — nothing else to do.
+Vercel runs the website.
 
-**Option B — buy elsewhere (Namecheap or Cloudflare), point it at Vercel**
-1. Buy the domain at `namecheap.com` or `cloudflare.com` (Cloudflare registrar sells at-cost, no markup, and is a reputable option).
-2. Back in Vercel, **Settings → Domains → Add**, type your domain, and Vercel will show you the DNS records to add (typically an `A` record to `76.76.21.21` and/or a `CNAME` for `www`).
-3. In your registrar's DNS settings, add exactly those records.
-4. DNS propagation can take anywhere from a few minutes to a few hours. Vercel's domain settings page will show a green checkmark once it's verified.
+1. Go to https://vercel.com → **Sign Up** → **Continue with GitHub**.
+2. Click **Add New…** → **Project**.
+3. Find `pic-of-the-week` in the list → **Import**.
+4. **Stop before clicking Deploy.** Expand **Environment Variables** first.
 
-**Name suggestions** (check availability at your registrar of choice): `picofthewk.com`, `pic-of-the-week.com`, `potw.app`, `weeklypic.com`, `thepicoftheweek.com`.
+You need to add 5 variables. Get the first four by running this and copying the
+values (do NOT share this output publicly — these are secrets):
 
-### After the domain is live
-Go back to Supabase **Authentication → URL Configuration** (step 2) and update **Site URL** to `https://yourdomain.com`, and confirm the production domain is in **Redirect URLs**. Magic-link emails will break silently if this isn't updated.
-
-## 7. Set up the weekly contest rollover (cron)
-
-The app needs something to flip the active `contest_weeks` row to `archived` and create the next one every Wednesday 00:00 America/New_York. Use Vercel Cron:
-
-1. In the project repo, confirm Claude Code created an API route for this (e.g. `app/api/cron/rollover-week/route.ts`) that performs the rollover using the `SUPABASE_SERVICE_ROLE_KEY`.
-2. Add a `vercel.json` at the project root (if not already present):
-
-```json
-{
-  "crons": [
-    { "path": "/api/cron/rollover-week", "schedule": "0 4 * * 3" }
-  ]
-}
+```
+cd ~/POW
+cat .env.local
 ```
 
-   (`0 4 * * 3` = 4:00 UTC every Wednesday, which is midnight America/New_York during EST; adjust to `0 5 * * 3` during EDT/daylight saving, or have the API route itself compute against `America/New_York` rather than relying on the cron's UTC time being exactly right — safer long-term.)
-3. Redeploy (`git push`, Vercel auto-deploys) and confirm in Vercel's **Settings → Cron Jobs** tab that the job is registered.
-4. You can manually trigger the route once via its URL (with whatever auth/secret header the route expects) to verify it works before waiting for the real schedule.
+Add these, one at a time (Name on the left, Value on the right):
 
-## 8. Go-live checklist
+| Name | Where the value comes from |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | from `.env.local` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from `.env.local` |
+| `SUPABASE_SERVICE_ROLE_KEY` | from `.env.local` |
+| `ADMIN_DASHBOARD_PASSWORD` | from `.env.local` (this unlocks `/admin`) |
+| `CRON_SECRET` | make one up — a long random string, e.g. from `openssl rand -base64 24` |
 
-Before sharing the domain publicly, verify:
+> **Do not** add `SUPABASE_DB_URL` or `SUPABASE_ACCESS_TOKEN`. Those are only for
+> running database scripts from your own machine. The website never uses them,
+> so keep them off the internet.
 
-- [ ] Custom SMTP is configured (step 2) — magic-link emails arrive within a few seconds, not stuck in spam.
-- [ ] Sign in end-to-end on a real phone: email → click link → session persists.
-- [ ] Camera capture works on **iOS Safari** and **Android Chrome** — camera permission prompt appears, capture works, no fallback to a file picker.
-- [ ] Submitting a second photo in the same week from the same account is correctly rejected.
-- [ ] View-time tracking caps at 120 seconds and re-viewing doesn't inflate a photo's score (spot-check by viewing a test photo twice).
-- [ ] Caption submit, vote, and duplicate-vote-block all work.
-- [ ] Archive/week switching shows frozen past-week data with no submit/vote affordances.
-- [ ] Share button copies a working deep link and shows the confirmation toast.
-- [ ] `/admin` is unreachable without the password, and reported content shows up there.
-- [ ] Cron rollover has been manually verified at least once (step 7.4).
-- [ ] Mobile viewport check on a couple of real screen sizes — layout matches the Figma spec at 402px width and doesn't break wider (desktop centers the same card).
+5. Click **Deploy**. Wait ~2 minutes.
+6. You'll get a URL like `pic-of-the-week-abc123.vercel.app`. Open it.
 
-Once all boxes are checked, share the domain.
+**The site will load but sign-in won't work yet** — that's expected. Stage 3 fixes it.
+
+---
+
+## Stage 3 — Make sign-in work (do not skip)
+
+Magic-link emails fail silently if you skip this.
+
+1. Go to https://supabase.com/dashboard/project/bfvktbjregwidbmopwtv/auth/url-configuration
+2. Set **Site URL** to your Vercel URL, e.g. `https://pic-of-the-week-abc123.vercel.app`
+3. Under **Redirect URLs**, click **Add URL** and add:
+   - `https://pic-of-the-week-abc123.vercel.app/**`
+   - `http://localhost:3000/**` (so local development keeps working)
+4. **Save**.
+5. Test it: open your Vercel URL, go to `/signin`, enter your real email, and
+   click the link in the email. You should end up signed in.
+
+> Supabase's built-in email is rate-limited and meant for testing. It's fine for
+> now, but see Stage 6 before you share the site widely.
+
+---
+
+## Stage 4 — Buy a domain and connect it
+
+1. In Vercel, open your project → **Settings** → **Domains**.
+2. Type the domain you want. If it's available, Vercel offers to sell it to you —
+   this is the easiest path because it configures everything automatically.
+   - Name ideas: `picofthewk.com`, `potw.app`, `weeklypic.com`, `thepicoftheweek.com`
+3. Pay. Wait a few minutes for the green checkmark.
+
+**If you'd rather buy elsewhere** (Cloudflare sells at cost, Namecheap is popular):
+buy there, then in Vercel **Settings → Domains → Add**, type your domain, and
+Vercel shows you DNS records to copy into your registrar's DNS settings. It can
+take a few minutes to a few hours to verify.
+
+**Then repeat Stage 3 with the real domain** — change Site URL to
+`https://yourdomain.com` and add `https://yourdomain.com/**` to Redirect URLs.
+Sign-in breaks if you forget this.
+
+---
+
+## Stage 5 — Turn on the weekly rollover
+
+This is what flips the contest over every Wednesday.
+
+Already configured in `vercel.json`. Just confirm it registered:
+
+1. Vercel project → **Settings** → **Cron Jobs**.
+2. You should see `/api/cron/rollover-week` scheduled `0 4 * * 3` (Wednesdays).
+3. If it isn't there, redeploy: **Deployments** → latest → **⋯** → **Redeploy**.
+
+The schedule is 4:00 UTC = midnight Eastern in winter, 1am Eastern in summer.
+The code itself always computes the correct Wednesday boundary in Eastern time,
+so a daylight-saving shift can delay a rollover by an hour but never breaks it.
+
+---
+
+## Stage 6 — Real email (before you share the site)
+
+Supabase's default email sender will rate-limit you once real people sign up.
+
+1. Make a free account at https://resend.com (or Postmark / SendGrid).
+2. Follow their steps to verify your domain.
+3. They'll give you SMTP settings (host, port, username, password).
+4. In Supabase: **Project Settings → Authentication → SMTP Settings** → enable
+   **Custom SMTP** → paste them in → Save.
+
+---
+
+## Stage 7 — Clear the demo data
+
+Your database currently holds fake photos (Alex, Sam, Jordan, Casey, Riley).
+Wipe them before real users arrive:
+
+```
+cd ~/POW
+node -e 'import("./scripts/mgmt.mjs").then(async ({runSql}) => {
+  await runSql("truncate reports, view_sessions, caption_votes, captions, photos, contest_weeks restart identity cascade");
+  await runSql("select * from rollover_contest_week()");
+  console.log("cleared demo data and started a fresh contest week");
+})'
+```
+
+The seed accounts (`*@seed.picoftheweek.test`) can be deleted in Supabase under
+**Authentication → Users** if you want them gone too.
+
+---
+
+## Final checklist
+
+Test on a **real phone**, not a desktop browser — the camera is the risky part.
+
+- [ ] Sign-in email arrives and logs you in
+- [ ] **Camera works on iPhone Safari** (permission prompt appears, capture works)
+- [ ] **Camera works on Android Chrome**
+- [ ] Submitting a photo works, and it shows on the home screen
+- [ ] Captions: write one, vote on someone else's
+- [ ] Share button copies a link that opens the right photo
+- [ ] `yourdomain.com/admin` asks for the password and lets you in
+- [ ] Switching weeks works and past weeks are read-only
+
+---
+
+## Things to know
+
+**Making changes later.** Edit code, then:
+
+```
+cd ~/POW
+git add -A
+git commit -m "describe what you changed"
+git push
+```
+
+Vercel redeploys automatically in ~2 minutes.
+
+**Turning limits back on.** Right now anyone can post unlimited photos and
+captions (deliberate, for testing). To enforce one each, add these in Vercel
+**Settings → Environment Variables**, then redeploy:
+
+```
+MAX_PHOTOS_PER_WEEK=1
+MAX_CAPTIONS_PER_PHOTO=1
+```
+
+**Your admin password** is in `.env.local`. To change it, update it there *and*
+in Vercel's environment variables, then redeploy.
+
+**Keep `.env.local` private.** It's already excluded from GitHub. Never paste its
+contents into a public place.
