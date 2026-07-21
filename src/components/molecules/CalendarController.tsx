@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 export type CalendarWeek = {
@@ -15,25 +15,86 @@ type CalendarControllerProps = {
   className?: string;
 };
 
+const SLIDE_MS = 420;
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+// Switching weeks is a route change, which remounts this component with a
+// fresh DOM node scrolled to 0. Module scope (not a ref) survives that remount
+// so we can restore the previous offset and ease from it — otherwise the dial
+// would snap into place instead of sliding. A full page load re-inits the
+// module, so the very first paint still positions instantly.
+let lastScrollLeft: number | null = null;
+let hasPositionedOnce = false;
+
+/** Scroll `scroller` so `target` sits centred, easing out. */
+function slideToCenter(scroller: HTMLElement, target: HTMLElement, animate: boolean) {
+  const sRect = scroller.getBoundingClientRect();
+  const tRect = target.getBoundingClientRect();
+  const delta = tRect.left + tRect.width / 2 - (sRect.left + sRect.width / 2);
+  const from = scroller.scrollLeft;
+  const to = Math.max(0, Math.min(from + delta, scroller.scrollWidth - scroller.clientWidth));
+  if (Math.abs(to - from) < 1) return;
+
+  const reduced =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (!animate || reduced) {
+    scroller.scrollLeft = to;
+    return;
+  }
+
+  const start = performance.now();
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / SLIDE_MS);
+    scroller.scrollLeft = from + (to - from) * easeOutCubic(t);
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function rememberScroll(el: HTMLElement) {
+  lastScrollLeft = el.scrollLeft;
+}
+
 export function CalendarController({ weeks, onSelect, className }: CalendarControllerProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLButtonElement>(null);
   const activeId = weeks.find((w) => w.isActive)?.id;
 
-  // Keep the selected week horizontally centered in the scroller. Runs after a
-  // frame so fonts/layout have settled — measuring too early leaves it at 0.
+  // Centre the selected week. First paint positions instantly; afterwards the
+  // dial eases out from wherever it was, including across a week-switch
+  // navigation (see lastScrollLeft above).
   useEffect(() => {
+    const scroller = scrollerRef.current;
     const active = activeRef.current;
-    if (!active) return;
+    if (!scroller || !active) return;
+
+    if (hasPositionedOnce && lastScrollLeft !== null) {
+      scroller.scrollLeft = lastScrollLeft; // resume where the last view left off
+    }
+
     const raf = requestAnimationFrame(() => {
-      active.scrollIntoView({ inline: "center", block: "nearest" });
+      slideToCenter(scroller, active, hasPositionedOnce);
+      hasPositionedOnce = true;
     });
     return () => cancelAnimationFrame(raf);
   }, [activeId]);
 
+  // Slide immediately on tap so the dial responds before navigation lands.
+  const handleSelect = useCallback(
+    (id: string, el: HTMLButtonElement) => {
+      const scroller = scrollerRef.current;
+      if (scroller) slideToCenter(scroller, el, true);
+      onSelect(id);
+    },
+    [onSelect],
+  );
+
   return (
     <div
       ref={scrollerRef}
+      onScroll={(e) => rememberScroll(e.currentTarget)}
       className={cn(
         "w-full overflow-x-auto border-t border-hairline [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
@@ -49,9 +110,9 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
             <button
               ref={week.isActive ? activeRef : undefined}
               type="button"
-              onClick={() => onSelect(week.id)}
+              onClick={(e) => handleSelect(week.id, e.currentTarget)}
               className={cn(
-                "shrink-0 px-1 text-sm font-bold tracking-wide uppercase transition-colors",
+                "shrink-0 px-1 text-sm font-bold tracking-wide uppercase transition-colors duration-300",
                 week.isActive ? "text-white" : "text-muted-2 hover:text-muted",
               )}
             >

@@ -27,8 +27,11 @@ export function ToolContainer({
   reportSlot,
 }: ToolContainerProps) {
   return (
+    // Side columns share a fixed width so the centre group stays optically
+    // centred — without it the wider "Report" label under the left arrow
+    // pushes the centre controls off to the right.
     <div className="flex w-full items-start justify-between px-6 pt-6 pb-4">
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex w-[4.5rem] flex-col items-center gap-2">
         <IconButton aria-label="Previous photo" onClick={onPrev} disabled={prevDisabled}>
           <Icon name="arrow" direction="left" />
         </IconButton>
@@ -47,7 +50,7 @@ export function ToolContainer({
         </IconButton>
       </div>
 
-      <div className="flex flex-col items-center gap-2">
+      <div className="flex w-[4.5rem] flex-col items-center gap-2">
         <IconButton aria-label="Next photo" onClick={onNext} disabled={nextDisabled}>
           <Icon name="arrow" direction="right" />
         </IconButton>
