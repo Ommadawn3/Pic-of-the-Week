@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { CAPTION_MAX_LENGTH, LIMITS } from "@/lib/config";
+import { ensureAppUser } from "@/lib/ensureAppUser";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -12,6 +13,7 @@ const MAX_CAPTION = CAPTION_MAX_LENGTH;
 export async function submitCaption(photoId: string, body: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Sign in to add a caption." };
+  await ensureAppUser(user);
 
   const trimmed = body.trim();
   if (!trimmed) return { ok: false, error: "Caption can't be empty." };
@@ -53,6 +55,7 @@ export async function submitCaption(photoId: string, body: string): Promise<Acti
 export async function toggleVote(captionId: string): Promise<ActionResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Sign in to vote." };
+  await ensureAppUser(user);
 
   const supabase = await createClient();
 

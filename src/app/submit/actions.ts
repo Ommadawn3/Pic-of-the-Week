@@ -5,6 +5,7 @@ import { getActiveWeek } from "@/lib/data/feed";
 import { getUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CAPTION_MAX_LENGTH, LIMITS } from "@/lib/config";
+import { ensureAppUser } from "@/lib/ensureAppUser";
 
 export type SubmitResult =
   | { ok: true; photoId: string }
@@ -15,6 +16,7 @@ const MAX_CAPTION = CAPTION_MAX_LENGTH;
 export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "You need to be signed in to post." };
+  await ensureAppUser(user);
 
   const week = await getActiveWeek();
   if (!week) return { ok: false, error: "There's no active contest right now." };

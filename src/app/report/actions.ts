@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
+import { ensureAppUser } from "@/lib/ensureAppUser";
 
 export type ReportResult = { ok: true } | { ok: false; error: string };
 
@@ -12,6 +13,7 @@ export async function reportContent(
 ): Promise<ReportResult> {
   const user = await getUser();
   if (!user) return { ok: false, error: "Sign in to report content." };
+  await ensureAppUser(user);
 
   const supabase = await createClient();
   const { error } = await supabase.from("reports").insert({
