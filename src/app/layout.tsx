@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Permanent_Marker } from "next/font/google";
 import "./globals.css";
 
@@ -19,6 +19,20 @@ export const metadata: Metadata = {
     "One candid photo a week, ranked by how long people actually look.",
 };
 
+// The app behaves like a native feed: the shell is fixed and only the feed
+// scrolls, so page-level scrolling and pinch-zoom are disabled. themeColor
+// black keeps the browser chrome blended with the page instead of flashing
+// white. viewportFit cover means HomeNav/ToolContainer must carry
+// env(safe-area-inset-*) padding — see .safe-top / .safe-bottom in globals.css.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
+  themeColor: "#000000",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,11 +41,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${permanentMarker.variable} h-full antialiased`}
+      className={`${inter.variable} ${permanentMarker.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-app text-app font-sans">
-        {children}
-      </body>
+      <body className="bg-app text-app font-sans">{children}</body>
     </html>
   );
 }

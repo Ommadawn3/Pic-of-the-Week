@@ -3,58 +3,73 @@
 import Link from "next/link";
 import { Icon } from "@/components/atoms/Icon";
 import { IconButton, iconButtonClass } from "@/components/atoms/IconButton";
+import { cn } from "@/lib/cn";
 
 type ToolContainerProps = {
-  onPrev?: () => void;
-  onNext?: () => void;
-  prevDisabled?: boolean;
-  nextDisabled?: boolean;
-  captionsHref: string;
+  /** Undefined disables the action (e.g. an empty week has no active photo). */
+  captionsHref?: string;
+  captionCount?: number;
   submitHref: string;
-  onShare: () => void;
-  /** Discreet report affordance, tucked under the left arrow. */
-  reportSlot?: React.ReactNode;
+  onShare?: () => void;
+  onReport?: () => void;
+  onInfo?: () => void;
 };
 
+/**
+ * Bottom bar: five evenly spaced actions. The prev/next arrows are gone — the
+ * feed is a vertical snap scroller now, so navigation is the scroll itself.
+ */
 export function ToolContainer({
-  onPrev,
-  onNext,
-  prevDisabled,
-  nextDisabled,
   captionsHref,
+  captionCount = 0,
   submitHref,
   onShare,
-  reportSlot,
+  onReport,
+  onInfo,
 }: ToolContainerProps) {
   return (
-    // Side columns share a fixed width so the centre group stays optically
-    // centred — without it the wider "Report" label under the left arrow
-    // pushes the centre controls off to the right.
-    <div className="flex w-full items-start justify-between px-6 pt-6 pb-4">
-      <div className="flex w-[4.5rem] flex-col items-center gap-2">
-        <IconButton aria-label="Previous photo" onClick={onPrev} disabled={prevDisabled}>
-          <Icon name="arrow" direction="left" />
-        </IconButton>
-        {reportSlot}
-      </div>
+    <nav
+      aria-label="Photo actions"
+      className="safe-bottom flex w-full shrink-0 items-center justify-between px-6 pt-4 pb-4"
+    >
+      <IconButton aria-label="Report this photo" onClick={onReport} disabled={!onReport}>
+        <Icon name="flag" />
+      </IconButton>
 
-      <div className="flex items-center gap-4">
-        <Link href={captionsHref} aria-label="View captions" className={iconButtonClass("default")}>
+      <IconButton aria-label="Share this photo" onClick={onShare} disabled={!onShare}>
+        <Icon name="share" />
+      </IconButton>
+
+      <Link href={submitHref} aria-label="Submit a photo" className={iconButtonClass("accent")}>
+        <Icon name="add" />
+      </Link>
+
+      {captionsHref ? (
+        <Link
+          href={captionsHref}
+          aria-label={`View captions (${captionCount})`}
+          className={cn(iconButtonClass("default"), "relative")}
+        >
           <Icon name="comment" />
+          {captionCount > 0 ? <CaptionBadge count={captionCount} /> : null}
         </Link>
-        <Link href={submitHref} aria-label="Submit a photo" className={iconButtonClass("accent")}>
-          <Icon name="add" />
-        </Link>
-        <IconButton aria-label="Share this photo" onClick={onShare}>
-          <Icon name="share" />
+      ) : (
+        <IconButton aria-label="View captions" disabled>
+          <Icon name="comment" />
         </IconButton>
-      </div>
+      )}
 
-      <div className="flex w-[4.5rem] flex-col items-center gap-2">
-        <IconButton aria-label="Next photo" onClick={onNext} disabled={nextDisabled}>
-          <Icon name="arrow" direction="right" />
-        </IconButton>
-      </div>
-    </div>
+      <IconButton aria-label="Photo stats" onClick={onInfo} disabled={!onInfo}>
+        <Icon name="info" />
+      </IconButton>
+    </nav>
+  );
+}
+
+function CaptionBadge({ count }: { count: number }) {
+  return (
+    <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-semibold text-white tabular-nums">
+      {count > 99 ? "99+" : count}
+    </span>
   );
 }

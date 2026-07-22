@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
@@ -7,11 +8,15 @@ export type CalendarWeek = {
   id: string;
   label: string;
   isActive: boolean;
+  /** Prefetch target so switching weeks feels instant. */
+  href?: string;
 };
 
 type CalendarControllerProps = {
   weeks: CalendarWeek[];
-  onSelect: (id: string) => void;
+  /** Optional side-effect on tap. Navigation is the Link's job — don't push
+   *  from here or the route change fires twice. */
+  onSelect?: (id: string) => void;
   className?: string;
 };
 
@@ -59,7 +64,7 @@ function rememberScroll(el: HTMLElement) {
 
 export function CalendarController({ weeks, onSelect, className }: CalendarControllerProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
-  const activeRef = useRef<HTMLButtonElement>(null);
+  const activeRef = useRef<HTMLAnchorElement>(null);
   const activeId = weeks.find((w) => w.isActive)?.id;
 
   // Centre the selected week. First paint positions instantly; afterwards the
@@ -83,10 +88,10 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
 
   // Slide immediately on tap so the dial responds before navigation lands.
   const handleSelect = useCallback(
-    (id: string, el: HTMLButtonElement) => {
+    (id: string, el: HTMLAnchorElement) => {
       const scroller = scrollerRef.current;
       if (scroller) slideToCenter(scroller, el, true);
-      onSelect(id);
+      onSelect?.(id);
     },
     [onSelect],
   );
@@ -107,9 +112,12 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
         {weeks.map((week, i) => (
           <div key={week.id} className="flex items-center gap-5">
             {i > 0 && <span className="size-0.5 shrink-0 rounded-full bg-muted-2" aria-hidden />}
-            <button
+            {/* Link (not button) so Next prefetches each week's shell —
+                every week chip is on screen, so switching feels instant.
+                onClick still drives the slide animation. */}
+            <Link
               ref={week.isActive ? activeRef : undefined}
-              type="button"
+              href={week.href ?? `/week/${week.id}`}
               onClick={(e) => handleSelect(week.id, e.currentTarget)}
               className={cn(
                 "shrink-0 px-1 text-sm font-bold tracking-wide uppercase transition-colors duration-300",
@@ -117,7 +125,7 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
               )}
             >
               {week.label}
-            </button>
+            </Link>
           </div>
         ))}
       </div>

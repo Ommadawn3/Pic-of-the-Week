@@ -1,23 +1,32 @@
+import { memo } from "react";
 import Image from "next/image";
 import { RankBadge } from "@/components/atoms/RankBadge";
-import { Tag, type TagVariant } from "@/components/atoms/Tag";
+import { Tag } from "@/components/atoms/Tag";
+import type { TagVariant } from "@/lib/types";
 
 type PolaroidPhotoCardProps = {
   imageUrl: string;
-  rank: number;
+  /** Omit on discovery slots — those identify themselves with a tag instead. */
+  rank?: number;
   tag?: TagVariant;
   topCaption?: string;
   authorName: string;
   capturedAtLabel: string;
+  /** LCP hint. Exactly one card in the feed should set this. */
+  priority?: boolean;
+  /** Fetch immediately rather than lazily (used to preload cards just ahead). */
+  eager?: boolean;
 };
 
-export function PolaroidPhotoCard({
+function PolaroidPhotoCardImpl({
   imageUrl,
   rank,
   tag,
   topCaption,
   authorName,
   capturedAtLabel,
+  priority,
+  eager,
 }: PolaroidPhotoCardProps) {
   return (
     <div className="flex w-full flex-col items-start bg-paper px-5 pt-5">
@@ -27,10 +36,12 @@ export function PolaroidPhotoCard({
           alt={topCaption ?? `Photo by ${authorName}`}
           fill
           className="pointer-events-none object-cover"
-          sizes="402px"
+          sizes="(max-width: 448px) 100vw, 402px"
+          priority={priority}
+          loading={priority ? undefined : eager ? "eager" : "lazy"}
         />
         <div className="absolute top-0 left-0 flex items-center">
-          <RankBadge rank={rank} />
+          {rank !== undefined ? <RankBadge rank={rank} /> : null}
           {tag ? <Tag variant={tag} /> : null}
         </div>
       </div>
@@ -54,3 +65,7 @@ export function PolaroidPhotoCard({
     </div>
   );
 }
+
+// Memoised: the feed re-renders on every snap, and without this each scroll
+// re-renders every mounted card and drops frames.
+export const PolaroidPhotoCard = memo(PolaroidPhotoCardImpl);

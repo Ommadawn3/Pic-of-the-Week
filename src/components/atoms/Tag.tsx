@@ -1,9 +1,7 @@
 import { cn } from "@/lib/cn";
-
-export type TagVariant = "leading" | "trending" | "new";
+import type { TagVariant } from "@/lib/types";
 
 const LABEL: Record<TagVariant, string> = {
-  leading: "Leading this week",
   trending: "Trending",
   new: "New",
 };

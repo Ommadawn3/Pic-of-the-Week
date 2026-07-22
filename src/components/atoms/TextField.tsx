@@ -35,7 +35,9 @@ export function TextField({
         placeholder={label}
         maxLength={maxLength}
         value={value}
-        className="min-w-0 flex-1 bg-transparent text-sm font-medium text-white caret-accent placeholder:text-white/25 focus:outline-none"
+        // text-base (16px) is deliberate: iOS Safari auto-zooms into any input
+        // smaller than 16px on focus, which fights the fixed-shell layout.
+        className="min-w-0 flex-1 bg-transparent text-base font-medium text-white caret-accent placeholder:text-white/25 focus:outline-none"
         {...props}
       />
       {showCount && maxLength ? (

@@ -1,45 +1,72 @@
+import { isNew, isTrending } from "./tags";
 import type { FeedPhoto } from "./types";
 
+export type FeedSlot = {
+  photo: FeedPhoto;
+  /** Ranked slots show their number; discovery slots show a tag instead. */
+  kind: "ranked" | "trending" | "new";
+};
+
 /**
- * Builds the swipe order for the active week. The list comes in ranked by
- * score; we interleave recent uploads into that order so new submissions get
- * seen as the week progresses instead of being buried (PRD §4.3). Archived
- * weeks skip this and just use rank order.
+ * Builds the scroll order for the active week:
  *
- * Pattern: every `recentEvery`-th slot pulls the newest not-yet-shown photo;
- * other slots pull the next-highest-ranked not-yet-shown photo.
+ *   rank 1, trending, rank 2, new, rank 3, trending, rank 4, new, …
+ *
+ * The leaderboard is split up front: the top half fills the ranked slots so
+ * their numbers stay consecutive (1, 2, 3, 4…), and the bottom half becomes
+ * the discovery pool shown between them. Partitioning first is what keeps the
+ * numbering clean — if discovery slots drew from the whole list they'd consume
+ * rank 2 and the next ranked slot would jump to 3.
+ *
+ * Every photo appears exactly once. Archived weeks skip all of this and use
+ * plain rank order.
  */
 export function buildBrowseOrder(
   ranked: FeedPhoto[],
-  { isActiveWeek, recentEvery = 4 }: { isActiveWeek: boolean; recentEvery?: number },
-): FeedPhoto[] {
-  if (!isActiveWeek || ranked.length <= 2) return ranked;
+  { isActiveWeek, now = new Date() }: { isActiveWeek: boolean; now?: Date },
+): FeedSlot[] {
+  if (!isActiveWeek || ranked.length <= 2) {
+    return ranked.map((photo) => ({ photo, kind: "ranked" as const }));
+  }
 
-  const byRank = [...ranked]; // already rank-ordered
-  const byRecent = [...ranked].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-  );
+  // Slots alternate ranked/discovery, so the top half carries the numbers.
+  const rankedCount = Math.ceil(ranked.length / 2);
+  const rankedStream = ranked.slice(0, rankedCount);
+  const pool = ranked.slice(rankedCount);
 
-  const order: FeedPhoto[] = [];
-  const used = new Set<string>();
-  let rankIdx = 0;
-  let recentIdx = 0;
+  const trendingQueue = pool.filter((p) => isTrending(p));
+  const newQueue = pool
+    .filter((p) => isNew(p, now) && !isTrending(p))
+    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
+  // Anything in the pool that's neither: still needs to be seen, shown with
+  // its rank rather than a tag it doesn't deserve.
+  const leftovers = pool.filter((p) => !isTrending(p) && !isNew(p, now));
 
-  const nextRanked = () => {
-    while (rankIdx < byRank.length && used.has(byRank[rankIdx].id)) rankIdx++;
-    return rankIdx < byRank.length ? byRank[rankIdx] : undefined;
+  const order: FeedSlot[] = [];
+  let r = 0;
+  let turn: "trending" | "new" = "trending";
+
+  const takeDiscovery = (): FeedSlot | undefined => {
+    const preferred = turn === "trending" ? trendingQueue : newQueue;
+    const other = turn === "trending" ? newQueue : trendingQueue;
+    const otherKind = turn === "trending" ? "new" : "trending";
+    if (preferred.length) return { photo: preferred.shift()!, kind: turn };
+    if (other.length) return { photo: other.shift()!, kind: otherKind };
+    if (leftovers.length) return { photo: leftovers.shift()!, kind: "ranked" };
+    return undefined;
   };
-  const nextRecent = () => {
-    while (recentIdx < byRecent.length && used.has(byRecent[recentIdx].id)) recentIdx++;
-    return recentIdx < byRecent.length ? byRecent[recentIdx] : undefined;
-  };
 
-  for (let slot = 0; order.length < ranked.length; slot++) {
-    const wantRecent = slot > 0 && slot % recentEvery === recentEvery - 1;
-    const pick = (wantRecent ? nextRecent() : nextRanked()) ?? nextRanked() ?? nextRecent();
-    if (!pick) break;
-    order.push(pick);
-    used.add(pick.id);
+  while (r < rankedStream.length || trendingQueue.length || newQueue.length || leftovers.length) {
+    if (r < rankedStream.length) {
+      order.push({ photo: rankedStream[r++], kind: "ranked" });
+    }
+    const discovery = takeDiscovery();
+    if (discovery) {
+      order.push(discovery);
+      turn = turn === "trending" ? "new" : "trending";
+    } else if (r >= rankedStream.length) {
+      break;
+    }
   }
 
   return order;

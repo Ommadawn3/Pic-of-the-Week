@@ -28,7 +28,6 @@ export default function StyleGuidePage() {
 
       <Section title="Tags">
         <div className="flex flex-wrap gap-2">
-          <Tag variant="leading" />
           <Tag variant="trending" />
           <Tag variant="new" />
         </div>
@@ -104,19 +103,31 @@ export default function StyleGuidePage() {
       <Section title="Tool container">
         <ToolContainer
           captionsHref="#"
+          captionCount={3}
           submitHref="#"
           onShare={() => {}}
+          onReport={() => {}}
+          onInfo={() => {}}
         />
       </Section>
 
-      <Section title="Polaroid photo card">
+      <Section title="Polaroid photo card (ranked slot)">
         <PolaroidPhotoCard
           imageUrl="/seed/sample-photo-1.png"
           rank={1}
-          tag="leading"
           topCaption="Yeah... It's official. I'm high"
           authorName="Alex B"
           capturedAtLabel="Wed 7:00 PM"
+        />
+      </Section>
+
+      <Section title="Polaroid photo card (discovery slot — tag, no rank)">
+        <PolaroidPhotoCard
+          imageUrl="/seed/sample-photo-1.png"
+          tag="trending"
+          topCaption="Pirate arrgh bounty warp jack"
+          authorName="Sam R"
+          capturedAtLabel="Mon 3:40 AM"
         />
       </Section>
     </main>

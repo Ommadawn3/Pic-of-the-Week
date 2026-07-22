@@ -6,6 +6,8 @@ const ICON_SRC = {
   add: "/icons/add.svg",
   comment: "/icons/comment.svg",
   share: "/icons/share.svg",
+  flag: "/icons/flag.svg",
+  info: "/icons/info.svg",
 } as const;
 
 export type IconName = keyof typeof ICON_SRC;

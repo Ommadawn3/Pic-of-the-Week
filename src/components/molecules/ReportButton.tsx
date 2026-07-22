@@ -1,9 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/cn";
-import { reportContent } from "@/app/report/actions";
+import { ReportSheet } from "@/components/organisms/ReportSheet";
 
 type ReportButtonProps = {
   targetType: "photo" | "caption";
@@ -12,27 +11,19 @@ type ReportButtonProps = {
   className?: string;
 };
 
+/**
+ * Inline report affordance (used on caption rows). Opens the same sheet as the
+ * feed's flag button so every report carries a written reason.
+ */
 export function ReportButton({ targetType, targetId, isSignedIn, className }: ReportButtonProps) {
-  const router = useRouter();
-  const [state, setState] = useState<"idle" | "done">("idle");
-  const [isPending, startTransition] = useTransition();
-
-  function onReport() {
-    if (!isSignedIn) {
-      router.push(`/signin?next=${encodeURIComponent(window.location.pathname)}`);
-      return;
-    }
-    startTransition(async () => {
-      await reportContent(targetType, targetId);
-      setState("done");
-    });
-  }
+  const [open, setOpen] = useState(false);
+  const [done, setDone] = useState(false);
 
   // Both states share a fixed width so swapping the label can't nudge the
   // controls sitting next to it.
   const shared = "inline-block w-[4.5rem] text-center text-xs text-muted";
 
-  if (state === "done") {
+  if (done) {
     return (
       <span className={cn(shared, className)} role="status">
         Reported
@@ -41,13 +32,26 @@ export function ReportButton({ targetType, targetId, isSignedIn, className }: Re
   }
 
   return (
-    <button
-      type="button"
-      onClick={onReport}
-      disabled={isPending}
-      className={cn(shared, "underline-offset-2 hover:underline disabled:opacity-50", className)}
-    >
-      Report
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(shared, "underline-offset-2 hover:underline", className)}
+      >
+        Report
+      </button>
+      {open ? (
+        <ReportSheet
+          targetType={targetType}
+          targetId={targetId}
+          isSignedIn={isSignedIn}
+          onClose={() => setOpen(false)}
+          onDone={() => {
+            setOpen(false);
+            setDone(true);
+          }}
+        />
+      ) : null}
+    </>
   );
 }

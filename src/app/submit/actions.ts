@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 import { getActiveWeek } from "@/lib/data/feed";
 import { getUser } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -8,7 +9,7 @@ import { CAPTION_MAX_LENGTH, LIMITS } from "@/lib/config";
 import { ensureAppUser } from "@/lib/ensureAppUser";
 
 export type SubmitResult =
-  | { ok: true; photoId: string }
+  | { ok: true; photoId: string; weekId: string }
   | { ok: false; error: string };
 
 const MAX_CAPTION = CAPTION_MAX_LENGTH;
@@ -92,5 +93,9 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
     });
   }
 
-  return { ok: true, photoId: photo.id };
+  // Refresh the feeds so the new photo is present the moment we land on it.
+  revalidatePath("/");
+  revalidatePath(`/week/${week.id}`);
+
+  return { ok: true, photoId: photo.id, weekId: week.id };
 }

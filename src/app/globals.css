@@ -37,7 +37,25 @@
   --color-danger: var(--color-danger);
 }
 
+html {
+  height: 100%;
+  overflow: hidden;
+  /* Black behind everything so overscroll/rotation never flashes white. */
+  background-color: #000000;
+  -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * `position: fixed; inset: 0` rather than 100dvh: dvh changes as the iOS URL
+ * bar collapses, which would resize every snap item mid-scroll and drift the
+ * feed's snap points. fixed/inset-0 is stable and exact.
+ */
 body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation; /* also kills double-tap zoom */
   color: #ffffff;
 }
 
@@ -51,4 +69,23 @@ body {
 
 .text-app {
   color: #ffffff;
+}
+
+/*
+ * Page scrolling is locked globally, so routes that legitimately scroll
+ * (admin, captions, submit, signin) opt back in with this on their container.
+ */
+.page-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Required companions to viewportFit: cover. */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }

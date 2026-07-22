@@ -1,4 +1,4 @@
-export type TagVariant = "leading" | "trending" | "new";
+export type TagVariant = "trending" | "new";
 
 export type ContestWeek = {
   id: string;

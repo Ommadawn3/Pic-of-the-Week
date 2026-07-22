@@ -1,16 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { HomeNav } from "@/components/organisms/HomeNav";
-import { PolaroidPhotoCard } from "@/components/organisms/PolaroidPhotoCard";
+import { FeedScroller } from "@/components/organisms/FeedScroller";
 import { CalendarController, type CalendarWeek } from "@/components/molecules/CalendarController";
 import { ToolContainer } from "@/components/molecules/ToolContainer";
-import { ReportButton } from "@/components/molecules/ReportButton";
+import { ReportSheet } from "@/components/organisms/ReportSheet";
+import { InfoOverlay } from "@/components/organisms/InfoOverlay";
 import { Toast } from "@/components/atoms/Toast";
 import { buildBrowseOrder } from "@/lib/browseOrder";
-import { deriveTag } from "@/lib/tags";
-import { formatCapturedAt } from "@/lib/week";
 import { useViewTracker } from "@/lib/useViewTracker";
 import type { FeedPhoto } from "@/lib/types";
 
@@ -33,32 +31,40 @@ export function HomeTemplate({
   initialPhotoId,
   isSignedIn,
 }: HomeTemplateProps) {
-  const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
-  const touchStartX = useRef<number | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
 
-  const ordered = useMemo(
+  const slots = useMemo(
     () => buildBrowseOrder(photos, { isActiveWeek }),
     [photos, isActiveWeek],
   );
 
-  // Open on the deep-linked photo if one was requested, else the top photo.
-  const [index, setIndex] = useState(() => {
+  const initialIndex = useMemo(() => {
     if (!initialPhotoId) return 0;
-    const i = ordered.findIndex((p) => p.id === initialPhotoId);
-    return i > 0 ? i : 0;
-  });
+    return Math.max(
+      slots.findIndex((s) => s.photo.id === initialPhotoId),
+      0,
+    );
+  }, [slots, initialPhotoId]);
 
-  const current = ordered[index];
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  const current = slots[activeIndex]?.photo;
 
-  // Track how long the current photo is on screen (active week only).
   useViewTracker(current?.id, isActiveWeek);
 
-  const go = useCallback(
-    (delta: number) => {
-      setIndex((i) => Math.min(Math.max(i + delta, 0), ordered.length - 1));
+  // Keep the URL pointed at the visible card so Back (e.g. from captions),
+  // refresh, and share all land on the right photo. replaceState is a shallow
+  // update — it doesn't re-run the route.
+  const onActiveChange = useCallback(
+    (i: number) => {
+      setActiveIndex(i);
+      const slot = slots[i];
+      if (slot) {
+        window.history.replaceState(null, "", `/week/${weekId}/photo/${slot.photo.id}`);
+      }
     },
-    [ordered.length],
+    [slots, weekId],
   );
 
   const onShare = useCallback(async () => {
@@ -72,65 +78,54 @@ export function HomeTemplate({
     }
   }, [current, weekId]);
 
-  const onSelectWeek = useCallback(
-    (id: string) => {
-      if (id === weekId) return;
-      router.push(`/week/${id}`);
-    },
-    [router, weekId],
-  );
-
-  function onTouchStart(e: React.TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-  function onTouchEnd(e: React.TouchEvent) {
-    if (touchStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
-    touchStartX.current = null;
-  }
+  // Week navigation is handled by the CalendarController's Links (so Next can
+  // prefetch each week's shell) — nothing to push from here.
 
   return (
-    <div className="flex min-h-full w-full flex-col">
+    // min-h-0 is load-bearing on both this column and the scroller inside it:
+    // without it the flex child refuses to shrink and grows the page instead
+    // of scrolling.
+    <div className="flex h-full min-h-0 w-full flex-col">
       <HomeNav statusLabel={statusLabel} />
-      <CalendarController weeks={weeks} onSelect={onSelectWeek} />
+      <CalendarController weeks={weeks} />
 
-      <div
-        className="flex flex-1 flex-col justify-center"
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
-        {current ? (
-          <PolaroidPhotoCard
-            imageUrl={current.image_url}
-            rank={current.rank}
-            tag={deriveTag(current, isActiveWeek)}
-            topCaption={current.top_caption ?? undefined}
-            authorName={authorLabel(current)}
-            capturedAtLabel={formatCapturedAt(current.captured_at)}
-          />
-        ) : (
-          <EmptyState isActiveWeek={isActiveWeek} />
-        )}
-      </div>
-
-      {current ? (
-        <ToolContainer
-          onPrev={() => go(-1)}
-          onNext={() => go(1)}
-          prevDisabled={index === 0}
-          nextDisabled={index >= ordered.length - 1}
-          captionsHref={`/week/${weekId}/photo/${current.id}/captions`}
-          submitHref="/submit"
-          onShare={onShare}
-          reportSlot={
-            <ReportButton
-              targetType="photo"
-              targetId={current.id}
-              isSignedIn={isSignedIn}
-            />
-          }
+      {slots.length > 0 ? (
+        <FeedScroller
+          slots={slots}
+          initialIndex={initialIndex}
+          onActiveChange={onActiveChange}
         />
+      ) : (
+        <EmptyState isActiveWeek={isActiveWeek} />
+      )}
+
+      {/* Rendered even on an empty week so the submit button stays reachable. */}
+      <ToolContainer
+        captionsHref={
+          current ? `/week/${weekId}/photo/${current.id}/captions` : undefined
+        }
+        captionCount={current?.caption_count ?? 0}
+        submitHref="/submit"
+        onShare={current ? onShare : undefined}
+        onReport={current ? () => setReportOpen(true) : undefined}
+        onInfo={current ? () => setInfoOpen(true) : undefined}
+      />
+
+      {reportOpen && current ? (
+        <ReportSheet
+          targetType="photo"
+          targetId={current.id}
+          isSignedIn={isSignedIn}
+          onClose={() => setReportOpen(false)}
+          onDone={() => {
+            setReportOpen(false);
+            setToast("Reported — thanks");
+          }}
+        />
+      ) : null}
+
+      {infoOpen && current ? (
+        <InfoOverlay photo={current} onClose={() => setInfoOpen(false)} />
       ) : null}
 
       {toast ? <Toast message={toast} onDone={() => setToast(null)} /> : null}
@@ -138,13 +133,9 @@ export function HomeTemplate({
   );
 }
 
-function authorLabel(photo: FeedPhoto): string {
-  return photo.initial ? `${photo.first_name} ${photo.initial}` : photo.first_name;
-}
-
 function EmptyState({ isActiveWeek }: { isActiveWeek: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-2 px-8 py-24 text-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-8 text-center">
       <p className="font-marker text-2xl text-white">Nothing here yet</p>
       <p className="text-sm text-muted">
         {isActiveWeek

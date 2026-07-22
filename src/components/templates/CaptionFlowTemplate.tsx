@@ -101,7 +101,7 @@ export function CaptionFlowTemplate({
   }
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <StandardNav title="Captions" onBack={() => router.push(`/week/${weekId}/photo/${photo.id}`)} />
 
       <div className="flex items-center justify-center border-b border-hairline py-4">
@@ -110,7 +110,8 @@ export function CaptionFlowTemplate({
         </div>
       </div>
 
-      <ul className="flex flex-1 flex-col">
+      {/* Only the list scrolls — the photo header and composer stay pinned. */}
+      <ul className="page-scroll flex min-h-0 flex-1 flex-col">
         {captions.length === 0 ? (
           <li className="px-6 py-10 text-center text-sm text-muted">
             No captions yet. Be the first to write one!

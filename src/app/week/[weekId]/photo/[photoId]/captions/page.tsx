@@ -21,7 +21,7 @@ export default async function CaptionsPage({
   if (!photo) notFound();
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-md flex-1 flex-col">
+    <main className="mx-auto flex h-full min-h-0 w-full max-w-md flex-col">
       <CaptionFlowTemplate
         photo={photo}
         weekId={weekId}

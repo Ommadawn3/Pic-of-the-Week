@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   if (!(await isAdmin())) {
     return (
-      <main className="mx-auto flex min-h-full w-full max-w-md flex-1 flex-col justify-center px-6 py-16">
+      <main className="page-scroll mx-auto flex w-full max-w-md flex-col justify-center px-6 py-16">
         <AdminLoginForm />
       </main>
     );
@@ -22,7 +22,7 @@ export default async function AdminPage() {
   const reports = await getOpenReports();
 
   return (
-    <main className="mx-auto flex min-h-full w-full max-w-2xl flex-1 flex-col gap-6 px-6 py-10">
+    <main className="page-scroll mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-10">
       <header className="flex items-center justify-between">
         <h1 className="font-marker text-2xl">Moderation</h1>
         <form action={adminLogout}>

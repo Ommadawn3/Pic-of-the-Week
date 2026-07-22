@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/atoms/TextField";
 import { StandardNav } from "@/components/organisms/StandardNav";
@@ -21,21 +21,47 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
   const [caption, setCaption] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const urlRef = useRef<string | null>(null);
 
-  const previewUrl = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob]);
-
-  const onCapture = useCallback((b: Blob) => {
-    setBlob(b);
-    setStep("confirm");
+  // Object URLs must be revoked or every retake leaks one for the tab's
+  // lifetime. Done in the event handlers rather than an effect: revoking from
+  // render or a state updater can free a URL that StrictMode's second pass
+  // still needs, blanking the preview in dev.
+  const setPhoto = useCallback((next: Blob | null) => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    const url = next ? URL.createObjectURL(next) : null;
+    urlRef.current = url;
+    setBlob(next);
+    setPreviewUrl(url);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    };
+  }, []);
+
+  const onCapture = useCallback(
+    (b: Blob) => {
+      setPhoto(b);
+      setStep("confirm");
+    },
+    [setPhoto],
+  );
 
   const retake = useCallback(() => {
-    setBlob(null);
+    setPhoto(null);
     setStep("capture");
-  }, []);
+  }, [setPhoto]);
+
+  // Keep the button busy until the destination actually commits, so there's no
+  // window where a successful submit looks like nothing happened.
+  const busy = submitting || isPending;
 
   async function onSubmit() {
-    if (!blob) return;
+    if (!blob || busy) return;
     setSubmitting(true);
     setError(null);
     const fd = new FormData();
@@ -43,30 +69,42 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
     fd.set("firstName", firstName);
     fd.set("initial", initial);
     fd.set("caption", caption);
+
     const result = await submitPhoto(fd);
-    if (result.ok) {
-      router.push("/");
-      router.refresh();
-    } else {
+    if (!result.ok) {
       setError(result.error);
       setSubmitting(false);
+      return;
     }
+    // Land on the photo they just posted. `replace`, not `push` — Back should
+    // not return to a spent form with a dead camera.
+    startTransition(() => {
+      router.replace(`/week/${result.weekId}/photo/${result.photoId}`);
+    });
   }
 
   const title =
     step === "capture" ? "Take a photo" : step === "confirm" ? "Confirm photo" : "Add details";
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <StandardNav
         title={title}
         onBack={step === "capture" ? () => router.push("/") : retake}
       />
 
-      {step === "capture" && <CameraCapture onCapture={onCapture} />}
+      {/*
+        Kept mounted across capture → confirm → retake and hidden with CSS
+        rather than unmounted. Unmounting stops the MediaStream, and starting a
+        new one re-triggers the OS permission prompt on every retake — which is
+        what made the app feel like it was constantly asking for the camera.
+      */}
+      <div className={step === "capture" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+        <CameraCapture onCapture={onCapture} />
+      </div>
 
       {step === "confirm" && previewUrl && (
-        <div className="flex flex-1 flex-col">
+        <div className="page-scroll flex flex-1 flex-col">
           <div className="relative aspect-square w-full overflow-hidden bg-black">
             <Image src={previewUrl} alt="Your photo" fill className="object-cover" unoptimized />
           </div>
@@ -82,7 +120,7 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
       )}
 
       {step === "details" && previewUrl && (
-        <div className="flex flex-1 flex-col gap-6 px-6 py-6">
+        <div className="page-scroll flex flex-1 flex-col gap-6 px-6 py-6">
           <div className="flex justify-center">
             <div className="relative size-[100px] overflow-hidden rounded-md bg-black">
               <Image src={previewUrl} alt="Your photo" fill className="object-cover" unoptimized />
@@ -126,10 +164,10 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
           <div className="mt-auto">
             <Button
               onClick={onSubmit}
-              disabled={submitting || !firstName.trim()}
+              disabled={busy || !firstName.trim()}
               className="w-full border border-accent-border bg-accent-bg text-white hover:bg-accent-bg/80"
             >
-              {submitting ? "Submitting…" : "Submit"}
+              {busy ? "Submitting…" : "Submit"}
             </Button>
           </div>
         </div>
