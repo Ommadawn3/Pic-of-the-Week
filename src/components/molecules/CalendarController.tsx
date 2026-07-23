@@ -86,12 +86,19 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
     return () => cancelAnimationFrame(raf);
   }, [activeId]);
 
-  // Slide immediately on tap so the dial responds before navigation lands.
   const handleSelect = useCallback(
-    (id: string, el: HTMLAnchorElement) => {
+    (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
       const scroller = scrollerRef.current;
-      if (scroller) slideToCenter(scroller, el, true);
-      onSelect?.(id);
+      if (scroller) slideToCenter(scroller, e.currentTarget, true);
+
+      // With a handler attached we swap the week in place, so suppress the
+      // Link's navigation. Modified clicks (new tab/window) are left alone,
+      // and without a handler the href still works as a normal link.
+      const modified = e.metaKey || e.ctrlKey || e.shiftKey || e.altKey;
+      if (onSelect && !modified) {
+        e.preventDefault();
+        onSelect(id);
+      }
     },
     [onSelect],
   );
@@ -118,7 +125,7 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
             <Link
               ref={week.isActive ? activeRef : undefined}
               href={week.href ?? `/week/${week.id}`}
-              onClick={(e) => handleSelect(week.id, e.currentTarget)}
+              onClick={(e) => handleSelect(e, week.id)}
               className={cn(
                 "shrink-0 px-1 text-sm font-bold tracking-wide uppercase transition-colors duration-300",
                 week.isActive ? "text-white" : "text-muted-2 hover:text-muted",
