@@ -12,15 +12,21 @@ export async function getWeeks(): Promise<ContestWeek[]> {
   return data ?? [];
 }
 
+/**
+ * The current contest week, starting the next one if the last has ended.
+ *
+ * Rollover is on-demand rather than cron-only: a weekly cron leaves the site
+ * stuck on an expired week (showing "Ended", nobody able to submit) if a week
+ * closes at any other time or a run is missed. ensure_active_week() is
+ * idempotent and race-safe, so calling it per request is cheap and self-heals.
+ */
 export async function getActiveWeek(): Promise<ContestWeek | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("contest_weeks")
-    .select("*")
-    .eq("status", "active")
-    .maybeSingle();
+  const { data, error } = await supabase.rpc("ensure_active_week");
   if (error) throw error;
-  return data;
+  // Composite-returning RPCs come back as a single row (or an array of one).
+  const week = Array.isArray(data) ? data[0] : data;
+  return (week as ContestWeek) ?? null;
 }
 
 export async function getWeekById(id: string): Promise<ContestWeek | null> {
