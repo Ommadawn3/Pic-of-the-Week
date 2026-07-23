@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef } from "react";
+import { Fragment, useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/cn";
 
 export type CalendarWeek = {
@@ -115,9 +115,11 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
       {/* w-max so the row sizes to its content — without it the trailing 50%
           padding falls inside the parent's width and can't be scrolled into,
           leaving the last week stuck against the right edge. */}
-      <div className="flex w-max items-center gap-5 py-4 pr-[50%] pl-[50%] whitespace-nowrap">
+      {/* Flat row with a single gap so spacing is a uniform 16px between every
+          label and dot. Nesting each week in its own flex doubled the gap. */}
+      <div className="flex w-max items-center gap-4 py-4 pr-[50%] pl-[50%] whitespace-nowrap">
         {weeks.map((week, i) => (
-          <div key={week.id} className="flex items-center gap-5">
+          <Fragment key={week.id}>
             {i > 0 && <span className="size-0.5 shrink-0 rounded-full bg-muted-2" aria-hidden />}
             {/* Link (not button) so Next prefetches each week's shell —
                 every week chip is on screen, so switching feels instant.
@@ -127,13 +129,13 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
               href={week.href ?? `/week/${week.id}`}
               onClick={(e) => handleSelect(e, week.id)}
               className={cn(
-                "shrink-0 px-1 text-sm font-bold tracking-wide uppercase transition-colors duration-300",
+                "shrink-0 text-sm font-bold tracking-wide uppercase transition-colors duration-300",
                 week.isActive ? "text-white" : "text-muted-2 hover:text-muted",
               )}
             >
               {week.label}
             </Link>
-          </div>
+          </Fragment>
         ))}
       </div>
     </div>
