@@ -8,18 +8,21 @@ export type FeedSlot = {
 };
 
 /**
- * Builds the scroll order for the active week:
+ * Builds the scroll order for the active week: numbered leaderboard cards with
+ * tagged "discovery" cards interleaved between them —
  *
- *   rank 1, trending, rank 2, new, rank 3, trending, rank 4, new, …
+ *   1, trending, 2, new, 3, …
  *
- * The leaderboard is split up front: the top half fills the ranked slots so
- * their numbers stay consecutive (1, 2, 3, 4…), and the bottom half becomes
- * the discovery pool shown between them. Partitioning first is what keeps the
- * numbering clean — if discovery slots drew from the whole list they'd consume
- * rank 2 and the next ranked slot would jump to 3.
+ * Two firm rules:
+ *   • A discovery slot ONLY ever holds a genuinely tagged (New/Trending) photo.
+ *     It never falls back to showing an untagged photo's number, which used to
+ *     drop a lower rank in out of sequence (…2, 4, 3…).
+ *   • Every untagged card therefore appears in strict ascending rank order.
  *
- * Every photo appears exactly once. Archived weeks skip all of this and use
- * plain rank order.
+ * So a quiet week with few tagged photos simply has fewer discovery cards
+ * (e.g. 1, new, 2, 3, 4) rather than out-of-order numbers.
+ *
+ * Archived weeks skip all of this and use plain rank order.
  */
 export function buildBrowseOrder(
   ranked: FeedPhoto[],
@@ -29,45 +32,46 @@ export function buildBrowseOrder(
     return ranked.map((photo) => ({ photo, kind: "ranked" as const }));
   }
 
-  // Slots alternate ranked/discovery, so the top half carries the numbers.
-  const rankedCount = Math.ceil(ranked.length / 2);
-  const rankedStream = ranked.slice(0, rankedCount);
-  const pool = ranked.slice(rankedCount);
+  // Discovery cards come from the lower half of the leaderboard, so the top
+  // ranks always keep their numbers instead of being turned into tag cards.
+  const poolStart = Math.ceil(ranked.length / 2);
+  const pool = ranked.slice(poolStart);
 
-  const trendingQueue = pool.filter((p) => isTrending(p));
-  const newQueue = pool
+  const trending = pool.filter((p) => isTrending(p));
+  const newer = pool
     .filter((p) => isNew(p, now) && !isTrending(p))
     .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-  // Anything in the pool that's neither: still needs to be seen, shown with
-  // its rank rather than a tag it doesn't deserve.
-  const leftovers = pool.filter((p) => !isTrending(p) && !isNew(p, now));
 
-  const order: FeedSlot[] = [];
-  let r = 0;
+  // Build the discovery queue, alternating trending/new for variety and
+  // falling back to whichever still has entries.
+  const discovery: FeedSlot[] = [];
   let turn: "trending" | "new" = "trending";
-
-  const takeDiscovery = (): FeedSlot | undefined => {
-    const preferred = turn === "trending" ? trendingQueue : newQueue;
-    const other = turn === "trending" ? newQueue : trendingQueue;
-    const otherKind = turn === "trending" ? "new" : "trending";
-    if (preferred.length) return { photo: preferred.shift()!, kind: turn };
-    if (other.length) return { photo: other.shift()!, kind: otherKind };
-    if (leftovers.length) return { photo: leftovers.shift()!, kind: "ranked" };
-    return undefined;
-  };
-
-  while (r < rankedStream.length || trendingQueue.length || newQueue.length || leftovers.length) {
-    if (r < rankedStream.length) {
-      order.push({ photo: rankedStream[r++], kind: "ranked" });
+  while (trending.length || newer.length) {
+    const takeTrending = turn === "trending" ? trending.length > 0 : newer.length === 0;
+    if (takeTrending && trending.length) {
+      discovery.push({ photo: trending.shift()!, kind: "trending" });
+    } else if (newer.length) {
+      discovery.push({ photo: newer.shift()!, kind: "new" });
     }
-    const discovery = takeDiscovery();
-    if (discovery) {
-      order.push(discovery);
-      turn = turn === "trending" ? "new" : "trending";
-    } else if (r >= rankedStream.length) {
-      break;
-    }
+    turn = turn === "trending" ? "new" : "trending";
   }
+
+  // Everything not pulled into a discovery card stays a numbered card, in
+  // ascending rank order (ranked is already sorted, so a filter preserves it).
+  const usedInDiscovery = new Set(discovery.map((d) => d.photo.id));
+  const numbered: FeedSlot[] = ranked
+    .filter((p) => !usedInDiscovery.has(p.id))
+    .map((photo) => ({ photo, kind: "ranked" as const }));
+
+  // Interleave one discovery card after each numbered card until they run out,
+  // then the remaining numbered cards continue in order.
+  const order: FeedSlot[] = [];
+  let d = 0;
+  for (const slot of numbered) {
+    order.push(slot);
+    if (d < discovery.length) order.push(discovery[d++]);
+  }
+  while (d < discovery.length) order.push(discovery[d++]);
 
   return order;
 }
