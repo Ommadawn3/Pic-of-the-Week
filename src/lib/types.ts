@@ -21,4 +21,5 @@ export type FeedPhoto = {
   rank: number;
   top_caption: string | null;
   caption_count: number;
+  drinks_count: number;
 };

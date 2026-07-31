@@ -101,9 +101,11 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
             data-index={i}
             aria-posinset={i + 1}
             aria-setsize={slots.length}
+            // items-start so the polaroid rests against the week navigator
+            // instead of floating in the middle of a tall black band.
             // snap-always is what stops a hard fling from flying through a
             // dozen cards and crediting each one with a view.
-            className="flex h-full w-full snap-start snap-always items-center justify-center"
+            className="flex h-full w-full snap-start snap-always items-start justify-center"
           >
             {mounted ? (
               <PolaroidPhotoCard

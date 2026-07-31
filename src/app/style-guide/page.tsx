@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { Icon } from "@/components/atoms/Icon";
 import { IconButton } from "@/components/atoms/IconButton";
@@ -7,10 +8,16 @@ import { RankBadge } from "@/components/atoms/RankBadge";
 import { StatusPill } from "@/components/atoms/StatusPill";
 import { Tag } from "@/components/atoms/Tag";
 import { TextField } from "@/components/atoms/TextField";
+import { Stepper } from "@/components/atoms/Stepper";
 import { CalendarController } from "@/components/molecules/CalendarController";
 import { HomeNav } from "@/components/organisms/HomeNav";
 import { PolaroidPhotoCard } from "@/components/organisms/PolaroidPhotoCard";
 import { ToolContainer } from "@/components/molecules/ToolContainer";
+
+function StepperDemo() {
+  const [n, setN] = useState(3);
+  return <Stepper value={n} onChange={setN} aria-label="Demo" className="w-[140px]" />;
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -23,8 +30,12 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function StyleGuidePage() {
   return (
-    <main className="mx-auto flex w-full max-w-md flex-col gap-10 bg-app p-6">
+    <main className="page-scroll mx-auto flex w-full max-w-md flex-col gap-10 bg-app p-6">
       <h1 className="font-marker text-2xl">Pic of the Week — Style Guide</h1>
+
+      <Section title="Drinks stepper">
+        <StepperDemo />
+      </Section>
 
       <Section title="Tags">
         <div className="flex flex-wrap gap-2">

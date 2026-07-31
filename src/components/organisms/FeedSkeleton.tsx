@@ -20,8 +20,8 @@ export function FeedSkeleton() {
         <div className="h-4 w-32 animate-pulse rounded bg-white/10" />
       </div>
 
-      {/* Card */}
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      {/* Card — top-aligned to match the real feed so there's no jump. */}
+      <div className="flex min-h-0 flex-1 items-start justify-center">
         <PolaroidSkeleton />
       </div>
 

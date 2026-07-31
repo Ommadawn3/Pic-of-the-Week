@@ -30,7 +30,10 @@ export function ToolContainer({
   return (
     <nav
       aria-label="Photo actions"
-      className="safe-bottom flex w-full shrink-0 items-center justify-between px-6 pt-4 pb-4"
+      // tool-bottom = home-indicator inset + 24px, so the controls sit further
+      // off the bottom edge (see globals.css — it can't be a Tailwind pb-*
+      // because .safe-bottom would override it).
+      className="tool-bottom flex w-full shrink-0 items-center justify-between px-6 pt-4"
     >
       <IconButton aria-label="Report this photo" onClick={onReport} disabled={!onReport}>
         <Icon name="flag" />

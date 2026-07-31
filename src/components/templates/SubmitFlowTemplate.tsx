@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/atoms/TextField";
+import { Stepper } from "@/components/atoms/Stepper";
 import { StandardNav } from "@/components/organisms/StandardNav";
 import { CameraCapture } from "@/components/organisms/CameraCapture";
 import { submitPhoto } from "@/app/submit/actions";
@@ -19,6 +20,7 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
   const [firstName, setFirstName] = useState(defaultFirstName);
   const [initial, setInitial] = useState("");
   const [caption, setCaption] = useState("");
+  const [drinks, setDrinks] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -69,6 +71,7 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
     fd.set("firstName", firstName);
     fd.set("initial", initial);
     fd.set("caption", caption);
+    fd.set("drinks", String(drinks));
 
     const result = await submitPhoto(fd);
     if (!result.ok) {
@@ -156,6 +159,19 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
               onChange={(e) => setCaption(e.target.value)}
               maxLength={CAPTION_MAX_LENGTH}
               showCount
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 border-t border-hairline pt-6">
+            <div>
+              <p className="text-base font-medium text-muted">How many drinks?</p>
+              <p className="text-xs text-muted-2">Optional — leave at 0 to skip.</p>
+            </div>
+            <Stepper
+              aria-label="How many drinks have you had"
+              value={drinks}
+              onChange={setDrinks}
+              className="w-[140px]"
             />
           </div>
 

@@ -26,6 +26,9 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
   const initial = String(formData.get("initial") ?? "").trim() || null;
   const caption = String(formData.get("caption") ?? "").trim();
   const image = formData.get("image");
+  // Optional; clamp to the DB's allowed range so a bad client can't reject the
+  // whole insert on the check constraint.
+  const drinksCount = Math.max(0, Math.min(50, Math.floor(Number(formData.get("drinks")) || 0)));
 
   if (!firstName) return { ok: false, error: "Please enter your first name." };
   if (!(image instanceof File) || image.size === 0)
@@ -79,6 +82,7 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
       first_name: firstName,
       initial,
       captured_at: capturedAt,
+      drinks_count: drinksCount,
     })
     .select("id")
     .single();

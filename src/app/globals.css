@@ -89,3 +89,10 @@ body {
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* Tool bar bottom spacing: the home-indicator inset plus 24px of breathing
+   room. A dedicated rule rather than Tailwind's pb-* because .safe-bottom is
+   unlayered and would otherwise override the utility. */
+.tool-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 24px);
+}
