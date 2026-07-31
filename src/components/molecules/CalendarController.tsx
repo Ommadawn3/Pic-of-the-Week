@@ -117,7 +117,7 @@ export function CalendarController({ weeks, onSelect, className }: CalendarContr
           leaving the last week stuck against the right edge. */}
       {/* Flat row with a single gap so spacing is a uniform 16px between every
           label and dot. Nesting each week in its own flex doubled the gap. */}
-      <div className="flex w-max items-center gap-4 py-4 pr-[50%] pl-[50%] whitespace-nowrap">
+      <div className="flex w-max items-center gap-3 py-4 pr-[50%] pl-[50%] whitespace-nowrap">
         {weeks.map((week, i) => (
           <Fragment key={week.id}>
             {i > 0 && <span className="size-0.5 shrink-0 rounded-full bg-muted-2" aria-hidden />}
