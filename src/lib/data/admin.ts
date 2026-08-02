@@ -7,7 +7,7 @@ export type ReportItem = {
   reasons: string[];
   lastReportedAt: string;
   // content preview (null if already deleted)
-  photo?: { image_url: string; first_name: string } | null;
+  photo?: { image_url: string; first_name: string; media_type: "photo" | "clip" } | null;
   caption?: { body: string } | null;
   alreadyDeleted: boolean;
 };
@@ -50,13 +50,15 @@ export async function getOpenReports(): Promise<ReportItem[]> {
   if (photoIds.length) {
     const { data } = await admin
       .from("photos")
-      .select("id, image_url, first_name, deleted_at")
+      .select("id, image_url, first_name, deleted_at, media_type")
       .in("id", photoIds);
     const byId = new Map((data ?? []).map((p) => [p.id, p]));
     for (const item of items) {
       if (item.targetType !== "photo") continue;
       const p = byId.get(item.targetId);
-      item.photo = p ? { image_url: p.image_url, first_name: p.first_name } : null;
+      item.photo = p
+        ? { image_url: p.image_url, first_name: p.first_name, media_type: p.media_type }
+        : null;
       item.alreadyDeleted = !p || !!p.deleted_at;
     }
   }

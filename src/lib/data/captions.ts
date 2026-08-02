@@ -17,13 +17,14 @@ export type PhotoHeader = {
   first_name: string;
   initial: string | null;
   contest_week_id: string;
+  media_type: "photo" | "clip";
 };
 
 export async function getPhotoHeader(photoId: string): Promise<PhotoHeader | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("photos")
-    .select("id, image_url, first_name, initial, contest_week_id")
+    .select("id, image_url, first_name, initial, contest_week_id, media_type")
     .eq("id", photoId)
     .is("deleted_at", null)
     .maybeSingle();

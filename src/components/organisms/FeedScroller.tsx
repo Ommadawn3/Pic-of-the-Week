@@ -119,6 +119,9 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
                 capturedAtLabel={formatCapturedAt(photo.captured_at)}
                 priority={i === initialIndex}
                 eager={i > active && i <= active + PRELOAD_AHEAD}
+                mediaType={photo.media_type}
+                photoId={photo.id}
+                isActive={i === active}
               />
             ) : null}
           </article>

@@ -22,4 +22,6 @@ export type FeedPhoto = {
   top_caption: string | null;
   caption_count: number;
   drinks_count: number;
+  media_type: "photo" | "clip";
+  replay_count: number;
 };

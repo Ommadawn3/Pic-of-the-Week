@@ -2,6 +2,7 @@ import { memo } from "react";
 import Image from "next/image";
 import { RankBadge } from "@/components/atoms/RankBadge";
 import { Tag } from "@/components/atoms/Tag";
+import { ClipMedia } from "@/components/organisms/ClipMedia";
 import type { TagVariant } from "@/lib/types";
 
 type PolaroidPhotoCardProps = {
@@ -16,6 +17,11 @@ type PolaroidPhotoCardProps = {
   priority?: boolean;
   /** Fetch immediately rather than lazily (used to preload cards just ahead). */
   eager?: boolean;
+  /** "clip" renders a video with play-on-rest + tap-to-replay. */
+  mediaType?: "photo" | "clip";
+  /** Needed for clips: the photo id (replays) and whether this card is resting. */
+  photoId?: string;
+  isActive?: boolean;
 };
 
 function PolaroidPhotoCardImpl({
@@ -27,20 +33,27 @@ function PolaroidPhotoCardImpl({
   capturedAtLabel,
   priority,
   eager,
+  mediaType = "photo",
+  photoId,
+  isActive,
 }: PolaroidPhotoCardProps) {
   return (
     <div className="flex w-full flex-col items-start bg-paper px-5 pt-5">
-      <div className="relative aspect-square w-full">
-        <Image
-          src={imageUrl}
-          alt={topCaption ?? `Photo by ${authorName}`}
-          fill
-          className="pointer-events-none object-cover"
-          sizes="(max-width: 448px) 100vw, 402px"
-          priority={priority}
-          loading={priority ? undefined : eager ? "eager" : "lazy"}
-        />
-        <div className="absolute top-0 left-0 flex items-center">
+      <div className="relative aspect-square w-full overflow-hidden">
+        {mediaType === "clip" && photoId ? (
+          <ClipMedia src={imageUrl} photoId={photoId} isActive={!!isActive} />
+        ) : (
+          <Image
+            src={imageUrl}
+            alt={topCaption ?? `Photo by ${authorName}`}
+            fill
+            className="pointer-events-none object-cover"
+            sizes="(max-width: 448px) 100vw, 402px"
+            priority={priority}
+            loading={priority ? undefined : eager ? "eager" : "lazy"}
+          />
+        )}
+        <div className="pointer-events-none absolute top-0 left-0 flex items-center">
           {rank !== undefined ? <RankBadge rank={rank} /> : null}
           {tag ? <Tag variant={tag} /> : null}
         </div>

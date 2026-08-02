@@ -34,6 +34,9 @@ export function InfoOverlay({ photo, onClose }: { photo: FeedPhoto; onClose: () 
           <Row label={VIEW_TIME_LABEL} value={formatViewTime(photo.score)} />
           <Row label="People who looked" value={String(photo.viewer_count)} />
           <Row label="Captions" value={String(photo.caption_count)} />
+          {photo.media_type === "clip" ? (
+            <Row label="Replays" value={`▶ ${photo.replay_count}`} />
+          ) : null}
           {photo.drinks_count > 0 ? (
             <Row
               label="Drinks in"

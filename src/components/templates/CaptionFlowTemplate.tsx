@@ -106,7 +106,12 @@ export function CaptionFlowTemplate({
 
       <div className="flex items-center justify-center border-b border-hairline py-4">
         <div className="relative size-[100px] overflow-hidden bg-black">
-          <Image src={photo.image_url} alt="" fill className="object-cover" sizes="100px" unoptimized />
+          {photo.media_type === "clip" ? (
+            // First frame of the clip as a still thumbnail.
+            <video src={photo.image_url} muted playsInline preload="metadata" className="size-full object-cover" />
+          ) : (
+            <Image src={photo.image_url} alt="" fill className="object-cover" sizes="100px" unoptimized />
+          )}
         </div>
       </div>
 

@@ -7,7 +7,7 @@ import { Button } from "@/components/atoms/Button";
 import { TextField } from "@/components/atoms/TextField";
 import { Stepper } from "@/components/atoms/Stepper";
 import { StandardNav } from "@/components/organisms/StandardNav";
-import { CameraCapture } from "@/components/organisms/CameraCapture";
+import { CameraCapture, type CapturedMedia } from "@/components/organisms/CameraCapture";
 import { submitPhoto } from "@/app/submit/actions";
 import { CAPTION_MAX_LENGTH } from "@/lib/config";
 
@@ -17,6 +17,10 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
   const router = useRouter();
   const [step, setStep] = useState<Step>("capture");
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [media, setMedia] = useState<{ type: "photo" | "clip"; ext: string }>({
+    type: "photo",
+    ext: "jpg",
+  });
   const [firstName, setFirstName] = useState(defaultFirstName);
   const [initial, setInitial] = useState("");
   const [caption, setCaption] = useState("");
@@ -46,8 +50,9 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
   }, []);
 
   const onCapture = useCallback(
-    (b: Blob) => {
-      setPhoto(b);
+    (captured: CapturedMedia) => {
+      setPhoto(captured.blob);
+      setMedia({ type: captured.mediaType, ext: captured.ext });
       setStep("confirm");
     },
     [setPhoto],
@@ -67,7 +72,9 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
     setSubmitting(true);
     setError(null);
     const fd = new FormData();
-    fd.set("image", new File([blob], "photo.jpg", { type: "image/jpeg" }));
+    fd.set("media", new File([blob], `capture.${media.ext}`, { type: blob.type }));
+    fd.set("mediaType", media.type);
+    fd.set("ext", media.ext);
     fd.set("firstName", firstName);
     fd.set("initial", initial);
     fd.set("caption", caption);
@@ -86,8 +93,13 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
     });
   }
 
+  const noun = media.type === "clip" ? "clip" : "photo";
   const title =
-    step === "capture" ? "Take a photo" : step === "confirm" ? "Confirm photo" : "Add details";
+    step === "capture"
+      ? "Take a photo or clip"
+      : step === "confirm"
+        ? `Confirm ${noun}`
+        : "Add details";
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -109,7 +121,18 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
       {step === "confirm" && previewUrl && (
         <div className="page-scroll flex flex-1 flex-col">
           <div className="relative aspect-square w-full overflow-hidden bg-black">
-            <Image src={previewUrl} alt="Your photo" fill className="object-cover" unoptimized />
+            {media.type === "clip" ? (
+              <video
+                src={previewUrl}
+                className="size-full object-cover"
+                muted
+                playsInline
+                autoPlay
+                loop
+              />
+            ) : (
+              <Image src={previewUrl} alt="Your photo" fill className="object-cover" unoptimized />
+            )}
           </div>
           <div className="flex flex-1 items-center justify-center gap-4 px-6 py-10">
             <Button variant="secondary" onClick={retake} className="flex-1">
@@ -126,7 +149,11 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
         <div className="page-scroll flex flex-1 flex-col gap-6 px-6 py-6">
           <div className="flex justify-center">
             <div className="relative size-[100px] overflow-hidden rounded-md bg-black">
-              <Image src={previewUrl} alt="Your photo" fill className="object-cover" unoptimized />
+              {media.type === "clip" ? (
+                <video src={previewUrl} className="size-full object-cover" muted playsInline autoPlay loop />
+              ) : (
+                <Image src={previewUrl} alt="Your photo" fill className="object-cover" unoptimized />
+              )}
             </div>
           </div>
 

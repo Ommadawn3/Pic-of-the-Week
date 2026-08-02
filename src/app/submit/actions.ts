@@ -25,14 +25,16 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
   const firstName = String(formData.get("firstName") ?? "").trim();
   const initial = String(formData.get("initial") ?? "").trim() || null;
   const caption = String(formData.get("caption") ?? "").trim();
-  const image = formData.get("image");
+  const media = formData.get("media");
+  const mediaType = String(formData.get("mediaType") ?? "photo") === "clip" ? "clip" : "photo";
+  const ext = String(formData.get("ext") ?? (mediaType === "clip" ? "mp4" : "jpg")).replace(/[^a-z0-9]/gi, "");
   // Optional; clamp to the DB's allowed range so a bad client can't reject the
   // whole insert on the check constraint.
   const drinksCount = Math.max(0, Math.min(50, Math.floor(Number(formData.get("drinks")) || 0)));
 
   if (!firstName) return { ok: false, error: "Please enter your first name." };
-  if (!(image instanceof File) || image.size === 0)
-    return { ok: false, error: "No photo was captured. Try again." };
+  if (!(media instanceof File) || media.size === 0)
+    return { ok: false, error: `No ${mediaType} was captured. Try again.` };
   if (caption.length > MAX_CAPTION)
     return { ok: false, error: `Caption must be ${MAX_CAPTION} characters or fewer.` };
 
@@ -59,12 +61,13 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
     }
   }
 
-  // Upload the captured image.
-  const path = `${week.id}/${randomUUID()}.jpg`;
-  const bytes = new Uint8Array(await image.arrayBuffer());
+  // Upload the captured media (photo or clip) into the same bucket.
+  const contentType = media.type || (mediaType === "clip" ? `video/${ext}` : "image/jpeg");
+  const path = `${week.id}/${randomUUID()}.${ext}`;
+  const bytes = new Uint8Array(await media.arrayBuffer());
   const { error: uploadErr } = await admin.storage
     .from("photos")
-    .upload(path, bytes, { contentType: "image/jpeg", upsert: false });
+    .upload(path, bytes, { contentType, upsert: false });
   if (uploadErr) return { ok: false, error: uploadErr.message };
 
   const {
@@ -83,6 +86,7 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
       initial,
       captured_at: capturedAt,
       drinks_count: drinksCount,
+      media_type: mediaType,
     })
     .select("id")
     .single();

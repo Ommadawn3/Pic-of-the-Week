@@ -44,14 +44,24 @@ export default async function AdminPage() {
               <div className="flex items-start gap-3">
                 {item.targetType === "photo" && item.photo ? (
                   <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-black">
-                    <Image
-                      src={item.photo.image_url}
-                      alt=""
-                      fill
-                      className="object-cover"
-                      sizes="64px"
-                      unoptimized
-                    />
+                    {item.photo.media_type === "clip" ? (
+                      <video
+                        src={item.photo.image_url}
+                        muted
+                        playsInline
+                        preload="metadata"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <Image
+                        src={item.photo.image_url}
+                        alt=""
+                        fill
+                        className="object-cover"
+                        sizes="64px"
+                        unoptimized
+                      />
+                    )}
                   </div>
                 ) : null}
                 <div className="flex flex-1 flex-col gap-1">
