@@ -49,7 +49,7 @@ export function SignInForm({ next, initialError }: { next?: string; initialError
   async function verifyCode(e: React.FormEvent) {
     e.preventDefault();
     const token = code.trim();
-    if (token.length < 6) return;
+    if (token.length < 6) return; // codes are 6 digits; tolerate up to 8
     setStatus("verifying");
     setMessage("");
 
@@ -79,8 +79,8 @@ export function SignInForm({ next, initialError }: { next?: string; initialError
           inputMode="numeric"
           autoComplete="one-time-code"
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-          maxLength={6}
+          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 8))}
+          maxLength={8}
           required
         />
 
