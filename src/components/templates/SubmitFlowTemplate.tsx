@@ -13,7 +13,15 @@ import { CAPTION_MAX_LENGTH } from "@/lib/config";
 
 type Step = "capture" | "confirm" | "details";
 
-export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName?: string }) {
+export function SubmitFlowTemplate({
+  defaultFirstName = "",
+  defaultInitial = "",
+  nameLocked = false,
+}: {
+  defaultFirstName?: string;
+  defaultInitial?: string;
+  nameLocked?: boolean;
+}) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("capture");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -22,7 +30,7 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
     ext: "jpg",
   });
   const [firstName, setFirstName] = useState(defaultFirstName);
-  const [initial, setInitial] = useState("");
+  const [initial, setInitial] = useState(defaultInitial);
   const [caption, setCaption] = useState("");
   const [drinks, setDrinks] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -157,26 +165,38 @@ export function SubmitFlowTemplate({ defaultFirstName = "" }: { defaultFirstName
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <p className="text-base font-medium text-muted">Author&apos;s Name</p>
-            <div className="flex gap-3">
-              <TextField
-                label="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                autoComplete="given-name"
-                className="flex-1"
-                maxLength={40}
-              />
-              <TextField
-                label="Initial"
-                value={initial}
-                onChange={(e) => setInitial(e.target.value)}
-                maxLength={1}
-                className="w-[108px]"
-              />
+          {nameLocked ? (
+            <div className="flex items-baseline justify-between gap-2">
+              <p className="text-base font-medium text-muted">
+                Posting as{" "}
+                <span className="text-white">
+                  {firstName}
+                  {initial ? ` ${initial}.` : ""}
+                </span>
+              </p>
             </div>
-          </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <p className="text-base font-medium text-muted">Author&apos;s Name</p>
+              <div className="flex gap-3">
+                <TextField
+                  label="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  autoComplete="given-name"
+                  className="flex-1"
+                  maxLength={40}
+                />
+                <TextField
+                  label="Initial"
+                  value={initial}
+                  onChange={(e) => setInitial(e.target.value)}
+                  maxLength={1}
+                  className="w-[108px]"
+                />
+              </div>
+            </div>
+          )}
 
           <div className="flex flex-col gap-2 border-t border-hairline pt-6">
             <p className="text-base font-medium text-muted">Add a caption</p>
