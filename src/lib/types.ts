@@ -1,4 +1,7 @@
-export type TagVariant = "trending" | "new";
+export type TagVariant = "hot" | "new";
+
+/** A photo's discovery state within its week (from get_week_feed). */
+export type FeedState = "ranked" | "hot" | "new";
 
 export type ContestWeek = {
   id: string;
@@ -24,4 +27,5 @@ export type FeedPhoto = {
   drinks_count: number;
   media_type: "photo" | "clip";
   replay_count: number;
+  state: FeedState;
 };

@@ -1,70 +1,57 @@
-import { isNew, isTrending } from "./tags";
 import type { FeedPhoto } from "./types";
 
 export type FeedSlot = {
   photo: FeedPhoto;
-  /** Ranked slots show their number; discovery slots show a tag instead. */
-  kind: "ranked" | "trending" | "new";
+  /** Ranked slots show their number; discovery slots show a Hot/New tag. */
+  kind: "ranked" | "hot" | "new";
 };
 
 /**
- * Builds the scroll order for the active week: numbered leaderboard cards with
- * tagged "discovery" cards interleaved between them —
+ * Builds the scroll order for the active week: the numbered leaderboard (validated
+ * photos, in rank order) with discovery cards interleaved between them, alternating
+ * Hot and New —
  *
- *   1, trending, 2, new, 3, …
+ *   1, hot, 2, new, 3, hot, 4, new, …
  *
- * Two firm rules:
- *   • A discovery slot ONLY ever holds a genuinely tagged (New/Trending) photo.
- *     It never falls back to showing an untagged photo's number, which used to
- *     drop a lower rank in out of sequence (…2, 4, 3…).
- *   • Every untagged card therefore appears in strict ascending rank order.
- *
- * So a quiet week with few tagged photos simply has fewer discovery cards
- * (e.g. 1, new, 2, 3, 4) rather than out-of-order numbers.
+ * "Validated" (state === "ranked") means a photo has been seen by enough of the
+ * week's viewers to earn a real rank; everything else is a discovery card that
+ * keeps surfacing until it either validates onto the leaderboard or the week ends.
+ * This is what gives new photos a chance to be seen without letting thin-data
+ * photos claim a top rank.
  *
  * Archived weeks skip all of this and use plain rank order.
  */
 export function buildBrowseOrder(
   ranked: FeedPhoto[],
-  { isActiveWeek, now = new Date() }: { isActiveWeek: boolean; now?: Date },
+  { isActiveWeek }: { isActiveWeek: boolean },
 ): FeedSlot[] {
-  if (!isActiveWeek || ranked.length <= 2) {
+  if (!isActiveWeek) {
     return ranked.map((photo) => ({ photo, kind: "ranked" as const }));
   }
 
-  // Discovery cards come from the lower half of the leaderboard, so the top
-  // ranks always keep their numbers instead of being turned into tag cards.
-  const poolStart = Math.ceil(ranked.length / 2);
-  const pool = ranked.slice(poolStart);
-
-  const trending = pool.filter((p) => isTrending(p));
-  const newer = pool
-    .filter((p) => isNew(p, now) && !isTrending(p))
-    .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
-
-  // Build the discovery queue, alternating trending/new for variety and
-  // falling back to whichever still has entries.
-  const discovery: FeedSlot[] = [];
-  let turn: "trending" | "new" = "trending";
-  while (trending.length || newer.length) {
-    const takeTrending = turn === "trending" ? trending.length > 0 : newer.length === 0;
-    if (takeTrending && trending.length) {
-      discovery.push({ photo: trending.shift()!, kind: "trending" });
-    } else if (newer.length) {
-      discovery.push({ photo: newer.shift()!, kind: "new" });
-    }
-    turn = turn === "trending" ? "new" : "trending";
-  }
-
-  // Everything not pulled into a discovery card stays a numbered card, in
-  // ascending rank order (ranked is already sorted, so a filter preserves it).
-  const usedInDiscovery = new Set(discovery.map((d) => d.photo.id));
   const numbered: FeedSlot[] = ranked
-    .filter((p) => !usedInDiscovery.has(p.id))
+    .filter((p) => p.state === "ranked")
     .map((photo) => ({ photo, kind: "ranked" as const }));
 
-  // Interleave one discovery card after each numbered card until they run out,
-  // then the remaining numbered cards continue in order.
+  const hot: FeedSlot[] = ranked
+    .filter((p) => p.state === "hot")
+    .map((photo) => ({ photo, kind: "hot" as const }));
+  const fresh: FeedSlot[] = ranked
+    .filter((p) => p.state === "new")
+    .map((photo) => ({ photo, kind: "new" as const }));
+
+  // Discovery queue: alternate Hot / New, falling back to whichever still has
+  // entries, so both keep appearing all week.
+  const discovery: FeedSlot[] = [];
+  let turn: "hot" | "new" = "hot";
+  while (hot.length || fresh.length) {
+    const takeHot = turn === "hot" ? hot.length > 0 : fresh.length === 0;
+    if (takeHot && hot.length) discovery.push(hot.shift()!);
+    else if (fresh.length) discovery.push(fresh.shift()!);
+    turn = turn === "hot" ? "new" : "hot";
+  }
+
+  // One discovery card after each numbered card; leftovers of either run on.
   const order: FeedSlot[] = [];
   let d = 0;
   for (const slot of numbered) {

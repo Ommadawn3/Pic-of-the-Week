@@ -39,7 +39,7 @@ export default function StyleGuidePage() {
 
       <Section title="Tags">
         <div className="flex flex-wrap gap-2">
-          <Tag variant="trending" />
+          <Tag variant="hot" />
           <Tag variant="new" />
         </div>
       </Section>
@@ -135,7 +135,7 @@ export default function StyleGuidePage() {
       <Section title="Polaroid photo card (discovery slot — tag, no rank)">
         <PolaroidPhotoCard
           imageUrl="/seed/sample-photo-1.png"
-          tag="trending"
+          tag="hot"
           topCaption="Pirate arrgh bounty warp jack"
           authorName="Sam R"
           capturedAtLabel="Mon 3:40 AM"

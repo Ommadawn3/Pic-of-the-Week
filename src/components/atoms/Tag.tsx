@@ -2,7 +2,7 @@ import { cn } from "@/lib/cn";
 import type { TagVariant } from "@/lib/types";
 
 const LABEL: Record<TagVariant, string> = {
-  trending: "Trending",
+  hot: "Hot",
   new: "New",
 };
 
