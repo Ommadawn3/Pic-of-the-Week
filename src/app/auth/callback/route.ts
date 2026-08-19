@@ -14,12 +14,31 @@ export async function GET(request: NextRequest) {
 
   const supabase = await createClient();
 
+  // Send brand-new users (no saved name yet) through the one-time welcome screen,
+  // preserving wherever they were headed. Returning users go straight to `next`.
+  const destination = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      const { data } = await supabase
+        .from("users")
+        .select("first_name")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (!data?.first_name) {
+        return `${origin}/welcome?next=${encodeURIComponent(next)}`;
+      }
+    }
+    return `${origin}${next}`;
+  };
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) return NextResponse.redirect(await destination());
   } else if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type });
-    if (!error) return NextResponse.redirect(`${origin}${next}`);
+    if (!error) return NextResponse.redirect(await destination());
   }
 
   return NextResponse.redirect(`${origin}/signin?error=auth`);

@@ -22,8 +22,22 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
   const week = await getActiveWeek();
   if (!week) return { ok: false, error: "There's no active contest right now." };
 
-  const firstName = String(formData.get("firstName") ?? "").trim();
-  const initial = String(formData.get("initial") ?? "").trim() || null;
+  const admin = createAdminClient();
+
+  let firstName = String(formData.get("firstName") ?? "").trim();
+  let initial = String(formData.get("initial") ?? "").trim() || null;
+  // Fall back to the name saved at first sign-in if the form didn't carry one.
+  if (!firstName) {
+    const { data: profile } = await admin
+      .from("users")
+      .select("first_name, initial")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (profile?.first_name) {
+      firstName = profile.first_name;
+      initial = initial ?? profile.initial ?? null;
+    }
+  }
   const caption = String(formData.get("caption") ?? "").trim();
   const media = formData.get("media");
   const mediaType = String(formData.get("mediaType") ?? "photo") === "clip" ? "clip" : "photo";
@@ -37,8 +51,6 @@ export async function submitPhoto(formData: FormData): Promise<SubmitResult> {
     return { ok: false, error: `No ${mediaType} was captured. Try again.` };
   if (caption.length > MAX_CAPTION)
     return { ok: false, error: `Caption must be ${MAX_CAPTION} characters or fewer.` };
-
-  const admin = createAdminClient();
 
   // Per-week submission cap. Unlimited while LIMITS.photosPerWeek is null —
   // see src/lib/config.ts for how to re-tighten this as the userbase grows.
