@@ -1,9 +1,13 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useInstallPrompt } from "@/lib/useInstallPrompt";
 
 const DISMISS_KEY = "pow-install-dismissed";
+// Don't greet a first-time visitor with an install nag. Wait until they've spent
+// a little time in the app. Tune here — or swap for an engagement signal (e.g.
+// after N photos viewed) if a fixed delay feels wrong.
+const SHOW_AFTER_MS = 25_000;
 
 // false during SSR/hydration, true once mounted on the client — lets us read
 // localStorage at render time without a setState-in-effect.
@@ -29,11 +33,18 @@ export function InstallPrompt() {
   const { platform, isStandalone, canInstall, promptInstall } = useInstallPrompt();
   const hasMounted = useHasMounted();
   const [dismissedNow, setDismissedNow] = useState(false);
+  const [waited, setWaited] = useState(false);
+
+  // Hold the toast back for a beat so it doesn't hit a brand-new visitor.
+  useEffect(() => {
+    const t = setTimeout(() => setWaited(true), SHOW_AFTER_MS);
+    return () => clearTimeout(t);
+  }, []);
 
   const dismissed =
     dismissedNow || (hasMounted && localStorage.getItem(DISMISS_KEY) === "1");
 
-  if (!hasMounted || isStandalone || dismissed) return null;
+  if (!hasMounted || !waited || isStandalone || dismissed) return null;
 
   const showAndroid = platform === "android" && canInstall;
   const showIOS = platform === "ios";

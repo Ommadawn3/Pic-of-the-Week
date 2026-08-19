@@ -155,7 +155,7 @@ export function HomeTemplate({
     // without it the flex child refuses to shrink and grows the page instead
     // of scrolling.
     <div className="flex h-full min-h-0 w-full flex-col">
-      <HomeNav statusLabel={view.statusLabel} />
+      <HomeNav statusLabel={view.statusLabel} accountHref={isSignedIn ? "/account" : undefined} />
       <CalendarController weeks={navWeeks} onSelect={onSelectWeek} />
 
       {loadingWeek ? (
