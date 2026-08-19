@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Permanent_Marker } from "next/font/google";
 import "./globals.css";
+import { RegisterSW } from "@/components/organisms/RegisterSW";
+import { InstallPrompt } from "@/components/organisms/InstallPrompt";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -14,9 +16,18 @@ const permanentMarker = Permanent_Marker({
 });
 
 export const metadata: Metadata = {
+  applicationName: "Pic of the Week",
   title: "Pic of the Week",
   description:
     "One candid photo a week, ranked by how long people actually look.",
+  // Installed-PWA behavior on iOS: run full-screen (no Safari chrome) with a
+  // translucent status bar over the black shell. The apple-touch-icon link is
+  // generated from src/app/apple-icon.png automatically.
+  appleWebApp: {
+    capable: true,
+    title: "POW",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 // The app behaves like a native feed: the shell is fixed and only the feed
@@ -43,7 +54,11 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${permanentMarker.variable} antialiased`}
     >
-      <body className="bg-app text-app font-sans">{children}</body>
+      <body className="bg-app text-app font-sans">
+        {children}
+        <RegisterSW />
+        <InstallPrompt />
+      </body>
     </html>
   );
 }
