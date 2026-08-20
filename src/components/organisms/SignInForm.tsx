@@ -54,7 +54,12 @@ export function SignInForm({ next, initialError }: { next?: string; initialError
     setMessage("");
 
     const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+    // Existing users get an "email" (magic-link) OTP; brand-new users get a
+    // "signup" confirmation OTP. We don't know which, so try email then signup.
+    let error = (await supabase.auth.verifyOtp({ email, token, type: "email" })).error;
+    if (error) {
+      error = (await supabase.auth.verifyOtp({ email, token, type: "signup" })).error;
+    }
     if (error) {
       setStatus("sent");
       setMessage("That code didn't work. Check it and try again, or resend.");
