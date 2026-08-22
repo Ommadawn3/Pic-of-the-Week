@@ -46,7 +46,9 @@ function PolaroidPhotoCardImpl({
   viewerCount = 0,
 }: PolaroidPhotoCardProps) {
   return (
-    <div className="flex w-full flex-col items-start bg-paper px-5 pt-5">
+    <div className="flex w-full flex-col items-start bg-paper">
+      {/* Media is full-bleed — edge to edge — to maximize the photo/clip. The
+          white polaroid border only wraps the caption + actions below it. */}
       <div className="relative aspect-square w-full overflow-hidden">
         {mediaType === "clip" && photoId ? (
           <ClipMedia src={imageUrl} photoId={photoId} isActive={!!isActive} />
@@ -73,27 +75,29 @@ function PolaroidPhotoCardImpl({
           Line height is a deliberate 100%, not Figma's 78.96% — that measured
           too cramped in practice, and three lines still fit the 111px block
           comfortably. Don't "correct" it back to the Figma value. */}
-      <div className="flex min-h-[92px] w-full flex-col items-center justify-center gap-1 py-2 text-center">
-        {topCaption ? (
-          <p className="line-clamp-3 font-marker text-[18px] leading-[100%] text-ink">
-            {topCaption}
+      <div className="w-full px-5">
+        <div className="flex min-h-[88px] w-full flex-col items-center justify-center gap-1 py-2 text-center">
+          {topCaption ? (
+            <p className="line-clamp-3 font-marker text-[18px] leading-[100%] text-ink">
+              {topCaption}
+            </p>
+          ) : null}
+          <p className="text-sm text-muted">
+            {authorName}, {capturedAtLabel}
           </p>
-        ) : null}
-        <p className="text-sm text-muted">
-          {authorName}, {capturedAtLabel}
-        </p>
-      </div>
+        </div>
 
-      {photoId && weekId ? (
-        <PhotoActionRow
-          photoId={photoId}
-          weekId={weekId}
-          captionCount={captionCount}
-          viewerCount={viewerCount}
-          mediaType={mediaType}
-          imageUrl={imageUrl}
-        />
-      ) : null}
+        {photoId && weekId ? (
+          <PhotoActionRow
+            photoId={photoId}
+            weekId={weekId}
+            captionCount={captionCount}
+            viewerCount={viewerCount}
+            mediaType={mediaType}
+            imageUrl={imageUrl}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

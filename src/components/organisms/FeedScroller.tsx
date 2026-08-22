@@ -88,7 +88,7 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
       role="feed"
       aria-label="Photos this week"
       tabIndex={0}
-      className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain px-3 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [scroll-padding-block:1rem] focus:outline-none [&::-webkit-scrollbar]:hidden"
+      className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [scroll-padding-block:1rem] focus:outline-none [&::-webkit-scrollbar]:hidden"
     >
       {slots.map(({ photo, kind }, i) => {
         const mounted = !windowed || Math.abs(i - active) <= RENDER_RADIUS;

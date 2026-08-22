@@ -26,7 +26,7 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main"
-      className="tool-bottom flex w-full shrink-0 items-center justify-around border-t border-hairline px-4 pt-2"
+      className="safe-bottom flex w-full shrink-0 items-center justify-around border-t border-hairline px-4 pt-2"
     >
       <TabLink tab={TABS[0]} active={isActive(TABS[0].href)} />
       <TabLink tab={TABS[1]} active={isActive(TABS[1].href)} />
