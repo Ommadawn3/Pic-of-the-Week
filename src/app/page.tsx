@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 import { HomeTemplate } from "@/components/templates/HomeTemplate";
 import { getActiveWeek, getWeekFeed, getWeeks } from "@/lib/data/feed";
+import { getFriendIds } from "@/lib/data/friends";
 import { getUser } from "@/lib/auth";
 import { buildWeekNavItems, weekStatusLabel } from "@/lib/week";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ feed?: string }>;
+}) {
+  const { feed } = await searchParams;
   const activeWeek = await getActiveWeek();
 
   if (!activeWeek) {
@@ -25,6 +31,7 @@ export default async function HomePage() {
     getWeekFeed(activeWeek.id),
     getUser(),
   ]);
+  const friendIds = user ? await getFriendIds() : [];
 
   return (
     <main className="mx-auto flex h-full min-h-0 w-full max-w-md flex-col">
@@ -35,6 +42,9 @@ export default async function HomePage() {
         isActiveWeek
         weekId={activeWeek.id}
         isSignedIn={!!user}
+        currentUserId={user?.id ?? null}
+        friendIds={friendIds}
+        initialFeed={feed === "friends" ? "friends" : "global"}
       />
     </main>
   );

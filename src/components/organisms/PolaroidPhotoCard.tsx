@@ -1,5 +1,6 @@
 import { memo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { RankBadge } from "@/components/atoms/RankBadge";
 import { Tag } from "@/components/atoms/Tag";
 import { ClipMedia } from "@/components/organisms/ClipMedia";
@@ -27,6 +28,8 @@ type PolaroidPhotoCardProps = {
   weekId?: string;
   captionCount?: number;
   viewerCount?: number;
+  /** When set, the author name links here to add them as a friend. */
+  authorHref?: string;
 };
 
 function PolaroidPhotoCardImpl({
@@ -44,6 +47,7 @@ function PolaroidPhotoCardImpl({
   weekId,
   captionCount = 0,
   viewerCount = 0,
+  authorHref,
 }: PolaroidPhotoCardProps) {
   return (
     // The white polaroid frame runs to the screen edges (no dark side gap), with
@@ -82,7 +86,17 @@ function PolaroidPhotoCardImpl({
           </p>
         ) : null}
         <p className="text-sm text-muted">
-          {authorName}, {capturedAtLabel}
+          {authorHref ? (
+            <Link
+              href={authorHref}
+              className="font-medium text-ink underline decoration-dotted underline-offset-2"
+            >
+              {authorName}
+            </Link>
+          ) : (
+            authorName
+          )}
+          , {capturedAtLabel}
         </p>
       </div>
 

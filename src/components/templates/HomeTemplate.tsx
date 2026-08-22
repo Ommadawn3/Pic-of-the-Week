@@ -21,6 +21,9 @@ type HomeTemplateProps = {
   weekId: string;
   initialPhotoId?: string;
   isSignedIn: boolean;
+  currentUserId?: string | null;
+  friendIds?: string[];
+  initialFeed?: "global" | "friends";
 };
 
 type WeekView = {
@@ -38,8 +41,18 @@ export function HomeTemplate({
   weekId,
   initialPhotoId,
   isSignedIn,
+  currentUserId = null,
+  friendIds = [],
+  initialFeed = "global",
 }: HomeTemplateProps) {
   const [toast, setToast] = useState<string | null>(null);
+  const [feedMode, setFeedMode] = useState<"global" | "friends">(initialFeed);
+
+  // In Friends mode, show only photos from people you've added (plus your own).
+  const friendSet = useMemo(
+    () => new Set([...friendIds, currentUserId].filter(Boolean) as string[]),
+    [friendIds, currentUserId],
+  );
 
   // The visible week lives in client state so switching weeks swaps only the
   // photo area — the header, week navigator and tool bar stay mounted instead
@@ -53,9 +66,17 @@ export function HomeTemplate({
   const [loadingWeek, setLoadingWeek] = useState(false);
   const requestRef = useRef(0);
 
+  const visiblePhotos = useMemo(
+    () =>
+      feedMode === "friends"
+        ? view.photos.filter((p) => friendSet.has(p.owner_user_id))
+        : view.photos,
+    [view.photos, feedMode, friendSet],
+  );
+
   const slots = useMemo(
-    () => buildBrowseOrder(view.photos, { isActiveWeek: view.isActiveWeek }),
-    [view.photos, view.isActiveWeek],
+    () => buildBrowseOrder(visiblePhotos, { isActiveWeek: view.isActiveWeek }),
+    [visiblePhotos, view.isActiveWeek],
   );
 
   // Deep-linked photo only applies to the week we arrived on.
@@ -144,19 +165,48 @@ export function HomeTemplate({
       <HomeNav statusLabel={view.statusLabel} accountHref={isSignedIn ? "/account" : undefined} />
       <CalendarController weeks={navWeeks} onSelect={onSelectWeek} />
 
+      {isSignedIn ? (
+        <div className="flex shrink-0 justify-center gap-2 px-6 pb-1 pt-1">
+          {(["global", "friends"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setFeedMode(m)}
+              className={
+                "rounded-full px-4 py-1 text-sm font-medium capitalize " +
+                (feedMode === m ? "bg-white text-black" : "bg-white/10 text-white")
+              }
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {loadingWeek ? (
         <div className="flex min-h-0 flex-1 items-center justify-center">
           <PolaroidSkeleton />
         </div>
       ) : slots.length > 0 ? (
-        // Keyed on the week so a switch remounts the scroller with a fresh
-        // scroll position rather than stranding it mid-feed.
+        // Keyed on week + feed mode so a switch remounts the scroller with a
+        // fresh scroll position rather than stranding it mid-feed.
         <FeedScroller
-          key={view.weekId}
+          key={`${view.weekId}-${feedMode}`}
           slots={slots}
           initialIndex={initialIndex}
           onActiveChange={onActiveChange}
+          currentUserId={currentUserId}
         />
+      ) : feedMode === "friends" ? (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-8 text-center">
+          <p className="font-marker text-2xl text-white">No friends here yet</p>
+          <p className="text-sm text-muted">
+            Add friends from their photo, or share your invite link.
+          </p>
+          <a href="/account" className="text-sm text-accent">
+            Get your invite link
+          </a>
+        </div>
       ) : (
         <EmptyState isActiveWeek={view.isActiveWeek} />
       )}

@@ -16,6 +16,8 @@ type FeedScrollerProps = {
   slots: FeedSlot[];
   initialIndex: number;
   onActiveChange: (index: number) => void;
+  /** Signed-in user id, so a photo's author links to "add friend" (not for own). */
+  currentUserId?: string | null;
 };
 
 /**
@@ -23,7 +25,12 @@ type FeedScrollerProps = {
  * JS-driven animation so scrolling stays on the compositor and doesn't drop
  * frames.
  */
-export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScrollerProps) {
+export function FeedScroller({
+  slots,
+  initialIndex,
+  onActiveChange,
+  currentUserId,
+}: FeedScrollerProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLElement | null)[]>([]);
   const readyRef = useRef(false);
@@ -123,6 +130,11 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
                 weekId={photo.contest_week_id}
                 captionCount={photo.caption_count}
                 viewerCount={photo.viewer_count}
+                authorHref={
+                  currentUserId && photo.owner_user_id !== currentUserId
+                    ? `/add/${photo.owner_user_id}`
+                    : undefined
+                }
               />
             ) : null}
           </article>
