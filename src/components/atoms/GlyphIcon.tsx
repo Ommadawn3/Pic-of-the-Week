@@ -16,7 +16,8 @@ export type GlyphName =
   | "download"
   | "share"
   | "comment"
-  | "arrow-up";
+  | "arrow-up"
+  | "refresh";
 
 const PATHS: Record<GlyphName, React.ReactNode> = {
   home: <path d="M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5" />,
@@ -54,6 +55,14 @@ const PATHS: Record<GlyphName, React.ReactNode> = {
   ),
   comment: <path d="M4 5h16v11H9l-4 3.5V16H4z" />,
   "arrow-up": <path d="M12 20V5m0 0 6 6m-6-6-6 6" />,
+  refresh: (
+    <>
+      <path d="M20 11a8 8 0 0 0-14-4.5L3 9" />
+      <path d="M3 4v5h5" />
+      <path d="M4 13a8 8 0 0 0 14 4.5L21 15" />
+      <path d="M21 20v-5h-5" />
+    </>
+  ),
 };
 
 export function GlyphIcon({

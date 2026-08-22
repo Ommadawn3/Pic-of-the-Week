@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { GlyphIcon } from "@/components/atoms/GlyphIcon";
 import { cn } from "@/lib/cn";
 
 const MAX_EDGE = 1080; // cap a photo's long edge before upload
@@ -21,6 +22,8 @@ const RECORD_CANDIDATES = [
 
 export type CaptureMode = "photo" | "clip";
 export type CapturedMedia = { blob: Blob; mediaType: CaptureMode; ext: string };
+type Facing = "environment" | "user";
+type ZoomRange = { min: number; max: number; step: number };
 
 type CameraCaptureProps = {
   onCapture: (media: CapturedMedia) => void;
@@ -39,6 +42,9 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [facing, setFacing] = useState<Facing>("environment");
+  const [zoomRange, setZoomRange] = useState<ZoomRange | null>(null);
+  const [zoom, setZoom] = useState(1);
 
   const clipMime = pickClipMime();
   const canClip = clipMime !== "";
@@ -46,6 +52,8 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   const [mode, setMode] = useState<CaptureMode>("clip");
   const effectiveMode: CaptureMode = canClip ? mode : "photo";
 
+  // (Re)acquire the camera whenever the chosen facing changes. Front/back is a
+  // fresh getUserMedia — you can't switch an existing track's facing.
   useEffect(() => {
     let cancelled = false;
     async function start() {
@@ -53,12 +61,14 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
         setError("This device or browser doesn't support camera capture.");
         return;
       }
+      setReady(false);
+      streamRef.current?.getTracks().forEach((t) => t.stop());
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           // audio:false — clips are silent by design (matches the gif-style
           // intent and sidesteps iOS's block on unmuted autoplay).
           video: {
-            facingMode: "environment",
+            facingMode: facing,
             width: { ideal: 1080 },
             height: { ideal: 1080 },
             frameRate: { ideal: 24 },
@@ -70,6 +80,21 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
           return;
         }
         streamRef.current = stream;
+
+        // Native (optical/sensor) zoom, where the device exposes it. Digital CSS
+        // zoom would only scale the preview, not the captured photo/clip, so we
+        // only offer zoom when the track actually supports it.
+        const track = stream.getVideoTracks()[0];
+        const caps = track.getCapabilities?.() as
+          | (MediaTrackCapabilities & { zoom?: ZoomRange })
+          | undefined;
+        if (caps?.zoom && caps.zoom.max > caps.zoom.min) {
+          setZoomRange({ min: caps.zoom.min, max: caps.zoom.max, step: caps.zoom.step || 0.1 });
+          setZoom(caps.zoom.min);
+        } else {
+          setZoomRange(null);
+        }
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
@@ -84,7 +109,21 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
       cancelled = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
+  }, [facing]);
+
+  const applyZoom = useCallback((z: number) => {
+    setZoom(z);
+    const track = streamRef.current?.getVideoTracks()[0];
+    // `zoom` isn't in the standard constraint types yet.
+    track
+      ?.applyConstraints({ advanced: [{ zoom: z }] } as unknown as MediaTrackConstraints)
+      .catch(() => {});
   }, []);
+
+  const flip = useCallback(() => {
+    if (recording) return;
+    setFacing((f) => (f === "environment" ? "user" : "environment"));
+  }, [recording]);
 
   const takePhoto = useCallback(() => {
     const video = videoRef.current;
@@ -103,13 +142,19 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
     canvas.height = target;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    // Mirror the capture for the front camera so the saved photo matches the
+    // mirrored preview the user framed.
+    if (facing === "user") {
+      ctx.translate(target, 0);
+      ctx.scale(-1, 1);
+    }
     ctx.drawImage(video, sx, sy, side, side, 0, 0, target, target);
     canvas.toBlob(
       (blob) => blob && onCapture({ blob, mediaType: "photo", ext: "jpg" }),
       "image/jpeg",
       0.9,
     );
-  }, [onCapture]);
+  }, [onCapture, facing]);
 
   const recordClip = useCallback(() => {
     const stream = streamRef.current;
@@ -143,11 +188,44 @@ export function CameraCapture({ onCapture }: CameraCaptureProps) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="relative aspect-square w-full overflow-hidden bg-black">
-        <video ref={videoRef} playsInline muted className="size-full object-cover" />
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          className={cn("size-full object-cover", facing === "user" && "-scale-x-100")}
+        />
         {recording ? (
           <span className="absolute top-3 left-3 flex items-center gap-2 rounded-full bg-black/60 px-3 py-1 text-xs text-white">
             <span className="size-2 animate-pulse rounded-full bg-danger" /> recording…
           </span>
+        ) : null}
+
+        {/* Flip camera */}
+        <button
+          type="button"
+          onClick={flip}
+          disabled={recording}
+          aria-label="Flip camera"
+          className="absolute top-3 right-3 flex size-10 items-center justify-center rounded-full bg-black/55 text-white disabled:opacity-40 active:scale-95"
+        >
+          <GlyphIcon name="refresh" size={20} />
+        </button>
+
+        {/* Zoom slider — only when the device offers real zoom */}
+        {zoomRange ? (
+          <div className="absolute inset-x-6 bottom-3 flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5">
+            <span className="text-xs text-white/80">Zoom</span>
+            <input
+              type="range"
+              min={zoomRange.min}
+              max={zoomRange.max}
+              step={zoomRange.step}
+              value={zoom}
+              onChange={(e) => applyZoom(Number(e.target.value))}
+              aria-label="Zoom"
+              className="flex-1 accent-white"
+            />
+          </div>
         ) : null}
       </div>
 
