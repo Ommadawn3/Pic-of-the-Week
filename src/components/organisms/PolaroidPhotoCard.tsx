@@ -3,6 +3,7 @@ import Image from "next/image";
 import { RankBadge } from "@/components/atoms/RankBadge";
 import { Tag } from "@/components/atoms/Tag";
 import { ClipMedia } from "@/components/organisms/ClipMedia";
+import { PhotoActionRow } from "@/components/organisms/PhotoActionRow";
 import type { TagVariant } from "@/lib/types";
 
 type PolaroidPhotoCardProps = {
@@ -22,6 +23,10 @@ type PolaroidPhotoCardProps = {
   /** Needed for clips: the photo id (replays) and whether this card is resting. */
   photoId?: string;
   isActive?: boolean;
+  /** Powers the per-photo action row (captions/views/share/save) under the caption. */
+  weekId?: string;
+  captionCount?: number;
+  viewerCount?: number;
 };
 
 function PolaroidPhotoCardImpl({
@@ -36,6 +41,9 @@ function PolaroidPhotoCardImpl({
   mediaType = "photo",
   photoId,
   isActive,
+  weekId,
+  captionCount = 0,
+  viewerCount = 0,
 }: PolaroidPhotoCardProps) {
   return (
     <div className="flex w-full flex-col items-start bg-paper px-5 pt-5">
@@ -65,7 +73,7 @@ function PolaroidPhotoCardImpl({
           Line height is a deliberate 100%, not Figma's 78.96% — that measured
           too cramped in practice, and three lines still fit the 111px block
           comfortably. Don't "correct" it back to the Figma value. */}
-      <div className="flex h-[111px] w-full flex-col items-center justify-center gap-1 text-center">
+      <div className="flex min-h-[92px] w-full flex-col items-center justify-center gap-1 py-2 text-center">
         {topCaption ? (
           <p className="line-clamp-3 font-marker text-[18px] leading-[100%] text-ink">
             {topCaption}
@@ -75,6 +83,17 @@ function PolaroidPhotoCardImpl({
           {authorName}, {capturedAtLabel}
         </p>
       </div>
+
+      {photoId && weekId ? (
+        <PhotoActionRow
+          photoId={photoId}
+          weekId={weekId}
+          captionCount={captionCount}
+          viewerCount={viewerCount}
+          mediaType={mediaType}
+          imageUrl={imageUrl}
+        />
+      ) : null}
     </div>
   );
 }

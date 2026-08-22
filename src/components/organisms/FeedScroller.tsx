@@ -88,11 +88,9 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
       role="feed"
       aria-label="Photos this week"
       tabIndex={0}
-      className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [scrollbar-width:none] focus:outline-none [&::-webkit-scrollbar]:hidden"
+      className="min-h-0 flex-1 snap-y snap-mandatory overflow-y-auto overscroll-y-contain px-3 py-4 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [scroll-padding-block:1rem] focus:outline-none [&::-webkit-scrollbar]:hidden"
     >
       {slots.map(({ photo, kind }, i) => {
-        // Wrappers are always rendered at full height so scroll height and
-        // snap points never shift as cards mount/unmount.
         const mounted = !windowed || Math.abs(i - active) <= RENDER_RADIUS;
         return (
           <article
@@ -101,12 +99,11 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
             data-index={i}
             aria-posinset={i + 1}
             aria-setsize={slots.length}
-            // items-center vertically centers the polaroid so the leftover
-            // height is balanced above and below it (a deliberate gallery frame)
-            // rather than dumped as one big black void beneath the caption.
-            // snap-always is what stops a hard fling from flying through a
-            // dozen cards and crediting each one with a view.
-            className="flex h-full w-full snap-start snap-always items-center justify-center"
+            // Natural card height + snap-center: because the card (photo +
+            // caption + actions) is shorter than the scroll area, the cards
+            // above and below peek in at the edges. snap-always still means one
+            // gesture = one card (and one view-tracking cycle).
+            className="flex w-full snap-center snap-always justify-center py-2"
           >
             {mounted ? (
               <PolaroidPhotoCard
@@ -123,6 +120,9 @@ export function FeedScroller({ slots, initialIndex, onActiveChange }: FeedScroll
                 mediaType={photo.media_type}
                 photoId={photo.id}
                 isActive={i === active}
+                weekId={photo.contest_week_id}
+                captionCount={photo.caption_count}
+                viewerCount={photo.viewer_count}
               />
             ) : null}
           </article>

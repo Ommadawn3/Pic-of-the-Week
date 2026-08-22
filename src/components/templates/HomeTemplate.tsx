@@ -5,9 +5,8 @@ import { HomeNav } from "@/components/organisms/HomeNav";
 import { FeedScroller } from "@/components/organisms/FeedScroller";
 import { PolaroidSkeleton } from "@/components/organisms/FeedSkeleton";
 import { CalendarController, type CalendarWeek } from "@/components/molecules/CalendarController";
-import { ToolContainer } from "@/components/molecules/ToolContainer";
-import { ReportSheet } from "@/components/organisms/ReportSheet";
-import { InfoOverlay } from "@/components/organisms/InfoOverlay";
+import { BottomNav } from "@/components/organisms/BottomNav";
+import { ScrollTopButton } from "@/components/organisms/ScrollTopButton";
 import { Toast } from "@/components/atoms/Toast";
 import { buildBrowseOrder } from "@/lib/browseOrder";
 import { useViewTracker } from "@/lib/useViewTracker";
@@ -41,8 +40,6 @@ export function HomeTemplate({
   isSignedIn,
 }: HomeTemplateProps) {
   const [toast, setToast] = useState<string | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [infoOpen, setInfoOpen] = useState(false);
 
   // The visible week lives in client state so switching weeks swaps only the
   // photo area — the header, week navigator and tool bar stay mounted instead
@@ -139,22 +136,11 @@ export function HomeTemplate({
     [slots, view.weekId],
   );
 
-  const onShare = useCallback(async () => {
-    if (!current) return;
-    const url = `${window.location.origin}/week/${view.weekId}/photo/${current.id}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setToast("Link copied to clipboard");
-    } catch {
-      setToast("Could not copy link");
-    }
-  }, [current, view.weekId]);
-
   return (
     // min-h-0 is load-bearing on both this column and the scroller inside it:
     // without it the flex child refuses to shrink and grows the page instead
-    // of scrolling.
-    <div className="flex h-full min-h-0 w-full flex-col">
+    // of scrolling. relative anchors the floating scroll-to-top button.
+    <div className="relative flex h-full min-h-0 w-full flex-col">
       <HomeNav statusLabel={view.statusLabel} accountHref={isSignedIn ? "/account" : undefined} />
       <CalendarController weeks={navWeeks} onSelect={onSelectWeek} />
 
@@ -175,34 +161,9 @@ export function HomeTemplate({
         <EmptyState isActiveWeek={view.isActiveWeek} />
       )}
 
-      {/* Rendered even on an empty week so the submit button stays reachable. */}
-      <ToolContainer
-        captionsHref={
-          current ? `/week/${view.weekId}/photo/${current.id}/captions` : undefined
-        }
-        captionCount={current?.caption_count ?? 0}
-        submitHref="/submit"
-        onShare={current ? onShare : undefined}
-        onReport={current ? () => setReportOpen(true) : undefined}
-        onInfo={current ? () => setInfoOpen(true) : undefined}
-      />
+      {slots.length > 0 ? <ScrollTopButton /> : null}
 
-      {reportOpen && current ? (
-        <ReportSheet
-          targetType="photo"
-          targetId={current.id}
-          isSignedIn={isSignedIn}
-          onClose={() => setReportOpen(false)}
-          onDone={() => {
-            setReportOpen(false);
-            setToast("Reported — thanks");
-          }}
-        />
-      ) : null}
-
-      {infoOpen && current ? (
-        <InfoOverlay photo={current} onClose={() => setInfoOpen(false)} />
-      ) : null}
+      <BottomNav />
 
       {toast ? <Toast message={toast} onDone={() => setToast(null)} /> : null}
     </div>
