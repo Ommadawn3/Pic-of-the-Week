@@ -46,13 +46,18 @@ html {
 }
 
 /*
- * `position: fixed; inset: 0` rather than 100dvh: dvh changes as the iOS URL
- * bar collapses, which would resize every snap item mid-scroll and drift the
- * feed's snap points. fixed/inset-0 is stable and exact.
+ * height: 100dvh so the shell always fills the *visible* viewport. With a plain
+ * fixed inset:0 body, iOS Safari sizes it to the toolbar-hidden viewport, which
+ * leaves a dead band below the bottom nav once the toolbar collapses. dvh tracks
+ * the real height instead; the feed uses snap-center, which stays centered
+ * through the small height change as the toolbar animates.
  */
 body {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100dvh;
   overflow: hidden;
   overscroll-behavior: none;
   touch-action: manipulation; /* also kills double-tap zoom */

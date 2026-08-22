@@ -46,9 +46,9 @@ function PolaroidPhotoCardImpl({
   viewerCount = 0,
 }: PolaroidPhotoCardProps) {
   return (
-    <div className="flex w-full flex-col items-start bg-paper">
-      {/* Media is full-bleed — edge to edge — to maximize the photo/clip. The
-          white polaroid border only wraps the caption + actions below it. */}
+    // The white polaroid frame runs to the screen edges (no dark side gap), with
+    // the photo inset by the paper border on all sides — a real polaroid look.
+    <div className="flex w-full flex-col items-start bg-paper px-5 pt-5 pb-2">
       <div className="relative aspect-square w-full overflow-hidden">
         {mediaType === "clip" && photoId ? (
           <ClipMedia src={imageUrl} photoId={photoId} isActive={!!isActive} />
@@ -75,29 +75,27 @@ function PolaroidPhotoCardImpl({
           Line height is a deliberate 100%, not Figma's 78.96% — that measured
           too cramped in practice, and three lines still fit the 111px block
           comfortably. Don't "correct" it back to the Figma value. */}
-      <div className="w-full px-5">
-        <div className="flex min-h-[88px] w-full flex-col items-center justify-center gap-1 py-2 text-center">
-          {topCaption ? (
-            <p className="line-clamp-3 font-marker text-[18px] leading-[100%] text-ink">
-              {topCaption}
-            </p>
-          ) : null}
-          <p className="text-sm text-muted">
-            {authorName}, {capturedAtLabel}
+      <div className="flex min-h-[88px] w-full flex-col items-center justify-center gap-1 py-2 text-center">
+        {topCaption ? (
+          <p className="line-clamp-3 font-marker text-[18px] leading-[100%] text-ink">
+            {topCaption}
           </p>
-        </div>
-
-        {photoId && weekId ? (
-          <PhotoActionRow
-            photoId={photoId}
-            weekId={weekId}
-            captionCount={captionCount}
-            viewerCount={viewerCount}
-            mediaType={mediaType}
-            imageUrl={imageUrl}
-          />
         ) : null}
+        <p className="text-sm text-muted">
+          {authorName}, {capturedAtLabel}
+        </p>
       </div>
+
+      {photoId && weekId ? (
+        <PhotoActionRow
+          photoId={photoId}
+          weekId={weekId}
+          captionCount={captionCount}
+          viewerCount={viewerCount}
+          mediaType={mediaType}
+          imageUrl={imageUrl}
+        />
+      ) : null}
     </div>
   );
 }
